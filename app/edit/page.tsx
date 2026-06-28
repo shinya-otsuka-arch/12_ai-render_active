@@ -177,11 +177,11 @@ export default function EditPage() {
       // 赤チャンネルが増加 & 緑が元と差がある = 塗られた部分
       const painted = dispR > origR + 30 && dispG < origG - 10;
 
-      const v = painted ? 255 : 0;
-      imgData.data[i] = v;
-      imgData.data[i + 1] = v;
-      imgData.data[i + 2] = v;
-      imgData.data[i + 3] = 255;
+      // OpenAI gpt-image-2 形式: 透明(A=0)=編集エリア、不透明(A=255)=維持エリア
+      imgData.data[i] = 255;
+      imgData.data[i + 1] = 255;
+      imgData.data[i + 2] = 255;
+      imgData.data[i + 3] = painted ? 0 : 255;
     }
 
     ctx.putImageData(imgData, 0, 0);

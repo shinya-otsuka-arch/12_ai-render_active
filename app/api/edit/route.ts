@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import Replicate from "replicate";
+import OpenAI, { toFile } from "openai";
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
+function dataUrlToBuffer(dataUrl: string): Buffer {
+  const base64 = dataUrl.replace(/^data:[^;]+;base64,/, "");
+  return Buffer.from(base64, "base64");
+}
 
 export async function POST(req: NextRequest) {
-  if (!process.env.REPLICATE_API_TOKEN) {
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
-      { error: "REPLICATE_API_TOKEN が設定されていません" },
+      { error: "OPENAI_API_KEY が設定されていません" },
       { status: 500 }
     );
   }
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 
   let body: { image: string; mask: string; prompt: string };
   try {
@@ -30,28 +35,28 @@ export async function POST(req: NextRequest) {
   }
 
   const fullPrompt = `${prompt}, photorealistic, professional architectural photography, 8k, ultra detailed`;
-  const negativePrompt = "blurry, distorted, low quality, cartoon, unrealistic";
 
   try {
-    // Stable Diffusion inpainting
-    const output = await replicate.run(
-      "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3",
-      {
-        input: {
-          image,
-          mask,
-          prompt: fullPrompt,
-          negative_prompt: negativePrompt,
-          num_inference_steps: 25,
-          guidance_scale: 7.5,
-        },
-      }
-    );
+    const imageBuffer = dataUrlToBuffer(image);
+    const maskBuffer = dataUrlToBuffer(mask);
 
-    const outputUrl = Array.isArray(output) ? output[0] : output;
-    return NextResponse.json({ output: outputUrl });
+    const result = await openai.images.edit({
+      model: "gpt-image-2",
+      image: await toFile(imageBuffer, "image.png", { type: "image/png" }),
+      mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
+      prompt: fullPrompt,
+      size: "1024x1024",
+      quality: "medium",
+    });
+
+    const b64 = result.data?.[0]?.b64_json;
+    if (!b64) {
+      throw new Error("画像データが取得できませんでした");
+    }
+
+    return NextResponse.json({ output: `data:image/png;base64,${b64}` });
   } catch (err) {
-    console.error("Replicate error:", err);
+    console.error("OpenAI error:", err);
     return NextResponse.json(
       { error: "画像編集に失敗しました。しばらくしてから再試行してください。" },
       { status: 500 }
