@@ -227,6 +227,18 @@ export default function EditPage() {
     const mask = getMaskDataUrl();
     if (!mask) return;
 
+    // OpenAI images.edit は PNG のみ対応のため、元画像をキャンバス経由で PNG に変換
+    const cleanImagePng = (() => {
+      const img = imageRef.current;
+      const canvas = canvasRef.current;
+      if (!img || !canvas) return uploadedImage;
+      const off = document.createElement("canvas");
+      off.width = canvas.width;
+      off.height = canvas.height;
+      off.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return off.toDataURL("image/png");
+    })();
+
     setStatus("generating");
     setResultImage(null);
 
@@ -234,7 +246,7 @@ export default function EditPage() {
       const res = await fetch("/api/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: uploadedImage, mask, prompt: prompt.trim() }),
+        body: JSON.stringify({ image: cleanImagePng, mask, prompt: prompt.trim() }),
       });
 
       if (!res.ok) {
