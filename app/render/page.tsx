@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Nav } from "@/components/nav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,18 +62,17 @@ export default function RenderPage() {
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("archirender-history");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("archirender-history");
-    if (stored) {
-      try {
-        setHistory(JSON.parse(stored));
-      } catch {}
-    }
-  }, []);
 
   const saveToHistory = useCallback(
     (url: string) => {
