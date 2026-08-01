@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Nav } from "@/components/nav";
 
 const features = [
   {
@@ -44,27 +45,7 @@ const steps = [
 export default function Home() {
   return (
     <main className="flex flex-col min-h-screen">
-      {/* ナビゲーション */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between">
-            <span className="text-lg font-bold tracking-tight text-primary">
-              ArchiRender
-            </span>
-            <nav className="flex items-center gap-1">
-              {features.map((f) => (
-                <Link
-                  key={f.href}
-                  href={f.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                  {f.title}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Nav />
 
       {/* ヒーロー */}
       <section className="relative overflow-hidden bg-gradient-to-b from-stone-900 to-stone-800 text-white">
@@ -140,7 +121,7 @@ export default function Home() {
       </section>
 
       {/* 使い方ステップ */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-stone-50">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-tight">3ステップで完成</h2>
@@ -169,7 +150,7 @@ export default function Home() {
       </section>
 
       {/* フッター */}
-      <footer className="mt-auto border-t bg-white py-8 px-4">
+      <footer className="mt-auto border-t bg-background py-8 px-4">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm font-semibold text-primary">ArchiRender</span>
           <p className="text-xs text-muted-foreground">
