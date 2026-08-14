@@ -9,12 +9,14 @@ interface MaterialReferencePickerProps {
   onChange: (dataUrl: string | null) => void;
   /** 編集モードなど、場所指定と組み合わせる説明 */
   hint?: string;
+  title?: string;
 }
 
 export function MaterialReferencePicker({
   value,
   onChange,
   hint = "床・壁・ファブリックなどの質感サンプルを指定できます",
+  title = "参考素材",
 }: MaterialReferencePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -34,7 +36,7 @@ export function MaterialReferencePicker({
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-        参考素材
+        {title}
       </p>
       <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{hint}</p>
 

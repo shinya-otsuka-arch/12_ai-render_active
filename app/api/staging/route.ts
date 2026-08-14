@@ -9,6 +9,7 @@ import {
   describeMaterialReference,
   appendMaterialReference,
 } from "@/lib/describe-material";
+import { resolveStyleBrief, applyStyleToPrompts } from "@/lib/resolve-style";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -28,6 +29,9 @@ export async function POST(req: NextRequest) {
     style: string;
     roomType: string;
     referenceImage?: string;
+    styleImages?: string[];
+    houseStyleBrief?: string;
+    styleStrength?: number;
   };
   try {
     body = await req.json();
@@ -35,7 +39,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "リクエストの解析に失敗しました" }, { status: 400 });
   }
 
-  const { image, style = "modern", roomType = "living room", referenceImage } = body;
+  const {
+    image,
+    style = "modern",
+    roomType = "living room",
+    referenceImage,
+    styleImages,
+    houseStyleBrief,
+    styleStrength,
+  } = body;
 
   if (!image) {
     return NextResponse.json({ error: "画像が必要です" }, { status: 400 });
@@ -62,16 +74,28 @@ export async function POST(req: NextRequest) {
       prompt = appendMaterialReference(prompt, materialReference, "global");
     }
 
+    const { styleBrief, styleStrength: resolvedStrength } = await resolveStyleBrief({
+      styleImages,
+      houseStyleBrief,
+      styleStrength,
+    });
+
+    let negative = [
+      "blurry, distorted, cartoon, low quality, empty room",
+      STYLE_GUARDRAIL_NEGATIVE,
+    ].join(", ");
+
+    const styled = applyStyleToPrompts(prompt, negative, styleBrief, resolvedStrength);
+    prompt = styled.prompt;
+    negative = styled.negative;
+
     const output = await replicate.run(
       "adirik/interior-design:76604baddc85b1b4616e1c6475eca080da339c8875bd4996705440484a6eac38",
       {
         input: {
           image,
           prompt,
-          negative_prompt: [
-            "blurry, distorted, cartoon, low quality, empty room",
-            STYLE_GUARDRAIL_NEGATIVE,
-          ].join(", "),
+          negative_prompt: negative,
           guidance_scale: 15,
           num_inference_steps: 50,
           strength: 0.8,

@@ -4,6 +4,7 @@ import { buildPrompt, buildNegativePrompt } from "@/lib/prompt-builder";
 import type { RenderParams } from "@/lib/prompt-builder";
 import { extractOutputUrl } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
+import { resolveStyleBrief } from "@/lib/resolve-style";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -22,7 +23,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: RenderParams & { image: string; referenceImage?: string };
+  let body: RenderParams & {
+    image: string;
+    referenceImage?: string;
+    styleImages?: string[];
+    houseStyleBrief?: string;
+    styleStrength?: number;
+  };
   try {
     body = await req.json();
   } catch {
@@ -37,6 +44,9 @@ export async function POST(req: NextRequest) {
     strength = 0.75,
     customPrompt,
     referenceImage,
+    styleImages,
+    houseStyleBrief,
+    styleStrength,
   } = body;
 
   if (!image) {
@@ -49,14 +59,22 @@ export async function POST(req: NextRequest) {
       materialReference = await describeMaterialReference(referenceImage);
     }
 
+    const { styleBrief, styleStrength: resolvedStrength } = await resolveStyleBrief({
+      styleImages,
+      houseStyleBrief,
+      styleStrength,
+    });
+
     const prompt = buildPrompt({
       projectType,
       lighting,
       materials,
       customPrompt,
       materialReference,
+      styleReference: styleBrief,
+      styleStrength: resolvedStrength,
     });
-    const negativePrompt = buildNegativePrompt();
+    const negativePrompt = buildNegativePrompt(styleBrief ? resolvedStrength : 0);
 
     const output = await replicate.run(RENDER_MODEL, {
       input: {

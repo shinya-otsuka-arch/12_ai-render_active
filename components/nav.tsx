@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/projects", label: "案件" },
+  { href: "/style-library", label: "作風" },
   { href: "/render", label: "パース" },
   { href: "/redesign", label: "リデザイン" },
   { href: "/staging", label: "ステージング" },

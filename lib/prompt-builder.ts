@@ -10,6 +10,10 @@ export interface RenderParams {
   customPrompt?: string;
   /** 参考素材を Vision 解析した英語フレーズ */
   materialReference?: string;
+  /** 作風参考を Vision 解析した英語フレーズ */
+  styleReference?: string;
+  /** 作風寄せ強度 0〜1 */
+  styleStrength?: number;
 }
 
 /** 建築設計事務所らしい落ち着いた本物感を促す共通ガードレール */
@@ -48,7 +52,15 @@ const materialMap: Record<Material, string> = {
 };
 
 export function buildPrompt(params: RenderParams): string {
-  const { projectType, lighting, materials, customPrompt, materialReference } = params;
+  const {
+    projectType,
+    lighting,
+    materials,
+    customPrompt,
+    materialReference,
+    styleReference,
+    styleStrength = 0.75,
+  } = params;
 
   const materialStr =
     materials.length > 0
@@ -59,11 +71,23 @@ export function buildPrompt(params: RenderParams): string {
     ? `use materials and finishes matching this reference sample: ${materialReference.trim()}`
     : "";
 
+  let styleStr = "";
+  if (styleReference?.trim()) {
+    const weight =
+      styleStrength >= 0.85
+        ? "strictly follow this house style"
+        : styleStrength >= 0.55
+          ? "strongly match this house style"
+          : "subtly lean toward this house style";
+    styleStr = `${weight}: ${styleReference.trim()}, avoid anything that clashes with this aesthetic`;
+  }
+
   const parts = [
     `photorealistic ${projectTypeMap[projectType]} render`,
     lightingMap[lighting],
     materialStr,
     referenceStr,
+    styleStr,
     STYLE_GUARDRAIL_POSITIVE,
     STRUCTURE_PRESERVE_POSITIVE,
     customPrompt?.trim(),
@@ -73,10 +97,16 @@ export function buildPrompt(params: RenderParams): string {
   return parts.join(", ");
 }
 
-export function buildNegativePrompt(): string {
-  return [
+export function buildNegativePrompt(styleStrength = 0): string {
+  const base = [
     "blurry, low quality, distorted, ugly, deformed, unrealistic, cartoon, anime, sketch, drawing, painting, watermark, text, signature",
     STYLE_GUARDRAIL_NEGATIVE,
     STRUCTURE_PRESERVE_NEGATIVE,
-  ].join(", ");
+  ];
+  if (styleStrength >= 0.4) {
+    base.push(
+      "style mismatch, conflicting design language, trendy AI look, overprocessed HDR, plastic CGI sheen, theme-park architecture"
+    );
+  }
+  return base.join(", ");
 }

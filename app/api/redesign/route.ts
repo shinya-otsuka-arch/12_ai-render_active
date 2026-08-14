@@ -4,6 +4,7 @@ import { buildPrompt, buildNegativePrompt } from "@/lib/prompt-builder";
 import type { ProjectType, Lighting, Material } from "@/lib/prompt-builder";
 import { extractOutputUrl } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
+import { resolveStyleBrief } from "@/lib/resolve-style";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -25,6 +26,9 @@ interface RedesignBody {
   structureScale?: number;
   customPrompt?: string;
   referenceImage?: string;
+  styleImages?: string[];
+  houseStyleBrief?: string;
+  styleStrength?: number;
 }
 
 function buildInteriorInput(
@@ -98,6 +102,9 @@ export async function POST(req: NextRequest) {
     structureScale = 0.8,
     customPrompt,
     referenceImage,
+    styleImages,
+    houseStyleBrief,
+    styleStrength,
   } = body;
 
   if (!image) {
@@ -117,14 +124,22 @@ export async function POST(req: NextRequest) {
       materialReference = await describeMaterialReference(referenceImage);
     }
 
+    const { styleBrief, styleStrength: resolvedStrength } = await resolveStyleBrief({
+      styleImages,
+      houseStyleBrief,
+      styleStrength,
+    });
+
     const prompt = buildPrompt({
       projectType,
       lighting,
       materials,
       customPrompt,
       materialReference,
+      styleReference: styleBrief,
+      styleStrength: resolvedStrength,
     });
-    const negativePrompt = buildNegativePrompt();
+    const negativePrompt = buildNegativePrompt(styleBrief ? resolvedStrength : 0);
 
     const output =
       projectType === "interior"

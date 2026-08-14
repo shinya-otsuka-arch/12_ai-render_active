@@ -13,6 +13,12 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import {
+  HouseStyleControls,
+  emptyHouseStyleSelection,
+  houseStyleToApiFields,
+  type HouseStyleSelection,
+} from "@/components/house-style-controls";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 import type { ProjectType, Lighting, Material } from "@/lib/prompt-builder";
@@ -53,6 +59,7 @@ export default function RenderPage() {
   const [strength, setStrength] = useState([0.75]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(emptyHouseStyleSelection);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [status, setStatus] = useState<ResultStatus>("idle");
@@ -111,6 +118,7 @@ export default function RenderPage() {
           strength: strength[0],
           customPrompt: customPrompt.trim() || undefined,
           referenceImage: referenceImage || undefined,
+          ...houseStyleToApiFields(houseStyle),
         }),
       });
 
@@ -158,6 +166,10 @@ export default function RenderPage() {
       paramPanel={
         <>
           <ActiveProjectSelect />
+
+          <Separator />
+
+          <HouseStyleControls value={houseStyle} onChange={setHouseStyle} />
 
           <Separator />
 

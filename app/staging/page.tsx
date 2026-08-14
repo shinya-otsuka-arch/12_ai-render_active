@@ -11,6 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import {
+  HouseStyleControls,
+  emptyHouseStyleSelection,
+  houseStyleToApiFields,
+  type HouseStyleSelection,
+} from "@/components/house-style-controls";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import {
   Select,
@@ -51,6 +57,7 @@ export default function StagingPage() {
   const [roomType, setRoomType] = useState("living room");
   const [style, setStyle] = useState("modern");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(emptyHouseStyleSelection);
 
   const { history, addEntry, clearHistory } = useHistory<StagingHistoryParams>(
     "archirender-history-staging"
@@ -96,6 +103,7 @@ export default function StagingPage() {
           style,
           roomType,
           referenceImage: referenceImage || undefined,
+          ...houseStyleToApiFields(houseStyle),
         }),
       });
 
@@ -129,6 +137,10 @@ export default function StagingPage() {
       paramPanel={
         <>
           <ActiveProjectSelect />
+
+          <Separator />
+
+          <HouseStyleControls value={houseStyle} onChange={setHouseStyle} />
 
           <Separator />
 
