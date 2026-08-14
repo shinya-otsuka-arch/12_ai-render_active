@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
+import {
+  STYLE_GUARDRAIL_POSITIVE,
+  STYLE_GUARDRAIL_NEGATIVE,
+} from "@/lib/prompt-builder";
+import { extractOutputUrl } from "@/lib/replicate-output";
+import {
+  describeMaterialReference,
+  appendMaterialReference,
+} from "@/lib/describe-material";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -14,14 +23,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { image: string; style: string; roomType: string };
+  let body: {
+    image: string;
+    style: string;
+    roomType: string;
+    referenceImage?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "リクエストの解析に失敗しました" }, { status: 400 });
   }
 
-  const { image, style = "modern", roomType = "living room" } = body;
+  const { image, style = "modern", roomType = "living room", referenceImage } = body;
 
   if (!image) {
     return NextResponse.json({ error: "画像が必要です" }, { status: 400 });
@@ -31,21 +45,33 @@ export async function POST(req: NextRequest) {
     modern: "modern contemporary furnished",
     scandinavian: "Scandinavian minimal furnished, warm wood, hygge",
     japanese: "Japanese minimalist furnished, wabi-sabi, tatami",
-    luxury: "luxury high-end furnished, marble, gold accents",
+    luxury: "refined high-end furnished, quality natural materials",
     industrial: "industrial loft furnished, exposed brick, metal",
   };
 
-  const prompt = `${roomType}, ${stylePromptMap[style] ?? "modern furnished"}, photorealistic interior design, professional photography, 8k, ultra detailed, cozy atmosphere`;
-
   try {
-    // Interior design staging model - 空室→家具配置特化
+    let prompt = [
+      roomType,
+      stylePromptMap[style] ?? "modern furnished",
+      STYLE_GUARDRAIL_POSITIVE,
+      "photorealistic interior design, professional photography, 8k, ultra detailed, cozy atmosphere",
+    ].join(", ");
+
+    if (referenceImage) {
+      const materialReference = await describeMaterialReference(referenceImage);
+      prompt = appendMaterialReference(prompt, materialReference, "global");
+    }
+
     const output = await replicate.run(
       "adirik/interior-design:76604baddc85b1b4616e1c6475eca080da339c8875bd4996705440484a6eac38",
       {
         input: {
           image,
           prompt,
-          negative_prompt: "blurry, distorted, cartoon, low quality, empty room",
+          negative_prompt: [
+            "blurry, distorted, cartoon, low quality, empty room",
+            STYLE_GUARDRAIL_NEGATIVE,
+          ].join(", "),
           guidance_scale: 15,
           num_inference_steps: 50,
           strength: 0.8,
@@ -53,13 +79,13 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const outputUrl = Array.isArray(output) ? output[0] : output;
-    return NextResponse.json({ output: outputUrl });
+    return NextResponse.json({ output: extractOutputUrl(output) });
   } catch (err) {
-    console.error("Replicate error:", err);
-    return NextResponse.json(
-      { error: "画像生成に失敗しました。しばらくしてから再試行してください。" },
-      { status: 500 }
-    );
+    console.error("Staging error:", err);
+    const message =
+      err instanceof Error && err.message.includes("OPENAI_API_KEY")
+        ? err.message
+        : "画像生成に失敗しました。しばらくしてから再試行してください。";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

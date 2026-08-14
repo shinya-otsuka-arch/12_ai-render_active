@@ -5,9 +5,13 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
+import { resizeDataUrl } from "@/lib/resize-image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { MaterialReferencePicker } from "@/components/material-reference-picker";
+import { ActiveProjectSelect } from "@/components/active-project-select";
+import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import {
   Select,
   SelectContent,
@@ -46,6 +50,7 @@ export default function StagingPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [roomType, setRoomType] = useState("living room");
   const [style, setStyle] = useState("modern");
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
   const { history, addEntry, clearHistory } = useHistory<StagingHistoryParams>(
     "archirender-history-staging"
@@ -86,7 +91,12 @@ export default function StagingPage() {
       const res = await fetch("/api/staging", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: uploadedImage, style, roomType }),
+        body: JSON.stringify({
+          image: uploadedImage,
+          style,
+          roomType,
+          referenceImage: referenceImage || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -97,7 +107,14 @@ export default function StagingPage() {
       const data = await res.json();
       setResultImage(data.output);
       setStatus("done");
-      addEntry(data.output, { roomType, style });
+      const beforeUrl = await resizeDataUrl(uploadedImage);
+      addEntry(data.output, { roomType, style }, beforeUrl);
+      await saveToActiveProjectIfSelected({
+        mode: "staging",
+        afterUrl: data.output,
+        beforeUrl: uploadedImage,
+        params: { roomType, style },
+      });
       toast.success("ステージングが完成しました");
     } catch (err) {
       setStatus("error");
@@ -111,6 +128,10 @@ export default function StagingPage() {
       description="空室写真 → 部屋タイプ・スタイルを選択 → 家具を自動配置"
       paramPanel={
         <>
+          <ActiveProjectSelect />
+
+          <Separator />
+
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
               AIステージングとは
@@ -170,6 +191,14 @@ export default function StagingPage() {
 
           <Separator />
 
+          <MaterialReferencePicker
+            value={referenceImage}
+            onChange={setReferenceImage}
+            hint="家具・ファブリック・床材などの雰囲気サンプル。部屋全体の質感に反映します"
+          />
+
+          <Separator />
+
           {/* 現在の設定 */}
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -196,7 +225,7 @@ export default function StagingPage() {
                 <span className="animate-spin">↻</span> 生成中...
               </span>
             ) : (
-              "ステージング生成 →"
+              "ステージングする"
             )}
           </Button>
         </>
@@ -206,6 +235,7 @@ export default function StagingPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
+            if (item.beforeUrl) setUploadedImage(item.beforeUrl);
             setStatus("done");
           }}
           onClear={clearHistory}

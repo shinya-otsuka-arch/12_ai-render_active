@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
+import { STYLE_GUARDRAIL_POSITIVE } from "@/lib/prompt-builder";
+import {
+  describeMaterialReference,
+  appendMaterialReference,
+} from "@/lib/describe-material";
 
 function dataUrlToBuffer(dataUrl: string): Buffer {
   const base64 = dataUrl.replace(/^data:[^;]+;base64,/, "");
@@ -18,14 +23,19 @@ export async function POST(req: NextRequest) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  let body: { image: string; mask: string; prompt: string };
+  let body: {
+    image: string;
+    mask: string;
+    prompt: string;
+    referenceImage?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "リクエストの解析に失敗しました" }, { status: 400 });
   }
 
-  const { image, mask, prompt } = body;
+  const { image, mask, prompt, referenceImage } = body;
 
   if (!image || !mask || !prompt) {
     return NextResponse.json(
@@ -34,9 +44,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const fullPrompt = `${prompt}, photorealistic, professional architectural photography, 8k, ultra detailed`;
-
   try {
+    let instruction = prompt;
+    if (referenceImage) {
+      const materialReference = await describeMaterialReference(referenceImage);
+      instruction = appendMaterialReference(prompt, materialReference, "masked");
+    }
+
+    const fullPrompt = `${instruction}, ${STYLE_GUARDRAIL_POSITIVE}, photorealistic, professional architectural photography, 8k, ultra detailed`;
+
     const imageBuffer = dataUrlToBuffer(image);
     const maskBuffer = dataUrlToBuffer(mask);
 

@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ArchiRender — AI建築レンダリング",
-  description: "建築・インテリアのAIパース生成ツール。パラメータ選択だけでフォトリアルなレンダリングを瞬時に生成。",
+  title: "ArchiRender — 社内AI建築レンダリング",
+  description:
+    "建築・インテリアの社内向けツール。AIパース・AIリデザイン・AIステージング・AI編集・AI高品質化。",
 };
 
 export default function RootLayout({
@@ -31,7 +32,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">
           {children}
           <Toaster position="bottom-right" />
         </ThemeProvider>

@@ -5,11 +5,15 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
+import { resizeDataUrl } from "@/lib/resize-image";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { MaterialReferencePicker } from "@/components/material-reference-picker";
+import { ActiveProjectSelect } from "@/components/active-project-select";
+import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 
 type DrawMode = "brush" | "eraser";
@@ -28,6 +32,7 @@ export default function EditPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [hasMask, setHasMask] = useState(false);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
   const { history, addEntry, clearHistory } = useHistory<EditHistoryParams>(
     "archirender-history-edit"
@@ -219,8 +224,8 @@ export default function EditPage() {
       toast.error("編集したい部分をブラシで塗ってください");
       return;
     }
-    if (!prompt.trim()) {
-      toast.error("変更内容を入力してください");
+    if (!prompt.trim() && !referenceImage) {
+      toast.error("変更内容を入力するか、参考素材を読み込んでください");
       return;
     }
 
@@ -242,11 +247,20 @@ export default function EditPage() {
     setStatus("generating");
     setResultImage(null);
 
+    const editPrompt =
+      prompt.trim() ||
+      "apply the material and texture from the reference sample to the masked area";
+
     try {
       const res = await fetch("/api/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: cleanImagePng, mask, prompt: prompt.trim() }),
+        body: JSON.stringify({
+          image: cleanImagePng,
+          mask,
+          prompt: editPrompt,
+          referenceImage: referenceImage || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -257,7 +271,14 @@ export default function EditPage() {
       const data = await res.json();
       setResultImage(data.output);
       setStatus("done");
-      addEntry(data.output, { prompt: prompt.trim() });
+      const beforeUrl = await resizeDataUrl(uploadedImage);
+      addEntry(data.output, { prompt: editPrompt }, beforeUrl);
+      await saveToActiveProjectIfSelected({
+        mode: "edit",
+        afterUrl: data.output,
+        beforeUrl: uploadedImage,
+        params: { prompt: editPrompt },
+      });
       toast.success("画像の編集が完了しました");
     } catch (err) {
       setStatus("error");
@@ -267,10 +288,14 @@ export default function EditPage() {
 
   return (
     <ToolLayout
-      title="AI画像編集"
+      title="AI編集"
       description="変更したい箇所を赤で塗って → 何に変えるか入力するだけ"
       paramPanel={
         <>
+          <ActiveProjectSelect />
+
+          <Separator />
+
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
               使い方
@@ -344,6 +369,14 @@ export default function EditPage() {
 
           <Separator />
 
+          <MaterialReferencePicker
+            value={referenceImage}
+            onChange={setReferenceImage}
+            hint="ブラシで塗った範囲に、この素材の質感を適用します"
+          />
+
+          <Separator />
+
           {/* 変更内容 */}
           <div>
             <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -362,7 +395,12 @@ export default function EditPage() {
 
           <Button
             onClick={handleGenerate}
-            disabled={status === "generating" || !uploadedImage || !hasMask || !prompt.trim()}
+            disabled={
+              status === "generating" ||
+              !uploadedImage ||
+              !hasMask ||
+              (!prompt.trim() && !referenceImage)
+            }
             className="w-full"
             size="lg"
           >
@@ -371,7 +409,7 @@ export default function EditPage() {
                 <span className="animate-spin">↻</span> 生成中...
               </span>
             ) : (
-              "AI編集 →"
+              "編集する"
             )}
           </Button>
         </>
@@ -381,6 +419,7 @@ export default function EditPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
+            if (item.beforeUrl) setUploadedImage(item.beforeUrl);
             setStatus("done");
           }}
           onClear={clearHistory}
@@ -460,7 +499,7 @@ export default function EditPage() {
               afterSrc={resultImage}
               placeholderIcon="◌"
               emptyHint="編集結果がここに表示されます"
-              generatingLabel="AI編集中..."
+              generatingLabel="編集中..."
               generatingHint="約20〜40秒かかります"
               downloadFileNamePrefix="edited"
             />

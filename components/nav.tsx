@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
-  { href: "/render", label: "AIパース" },
-  { href: "/staging", label: "AIステージング" },
-  { href: "/edit", label: "AI画像編集" },
+  { href: "/projects", label: "案件" },
+  { href: "/render", label: "パース" },
+  { href: "/redesign", label: "リデザイン" },
+  { href: "/staging", label: "ステージング" },
+  { href: "/edit", label: "編集" },
+  { href: "/enhance", label: "高品質化" },
 ];
 
 export function Nav() {
@@ -23,29 +25,27 @@ export function Nav() {
               ArchiRender
             </span>
             <span className="hidden text-xs text-muted-foreground sm:block">
-              AI建築レンダリング
+              社内AIレンダリング
             </span>
           </Link>
 
-          <div className="flex items-center gap-1 overflow-x-auto">
-            <nav className="flex items-center gap-1">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-                    pathname === link.href
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-            <ThemeToggle />
-          </div>
+          <nav className="flex items-center gap-1 overflow-x-auto">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                  pathname === link.href ||
+                  (link.href !== "/" && pathname.startsWith(link.href + "/"))
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </header>

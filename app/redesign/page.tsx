@@ -39,18 +39,21 @@ const MATERIALS: { value: Material; label: string }[] = [
   { value: "marble", label: "大理石" },
 ];
 
-interface RenderHistoryParams {
+interface RedesignHistoryParams {
   projectType: ProjectType;
   lighting: Lighting;
   materials: Material[];
+  strength: number;
+  structureScale: number;
   customPrompt?: string;
 }
 
-export default function RenderPage() {
+export default function RedesignPage() {
   const [projectType, setProjectType] = useState<ProjectType>("interior");
   const [lighting, setLighting] = useState<Lighting>("daytime");
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [strength, setStrength] = useState([0.75]);
+  const [strength, setStrength] = useState([0.7]);
+  const [structureScale, setStructureScale] = useState([0.8]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -58,8 +61,8 @@ export default function RenderPage() {
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [isDragging, setIsDragging] = useState(false);
 
-  const { history, addEntry, clearHistory } = useHistory<RenderHistoryParams>(
-    "archirender-history-render"
+  const { history, addEntry, clearHistory } = useHistory<RedesignHistoryParams>(
+    "archirender-history-redesign"
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,14 +96,14 @@ export default function RenderPage() {
 
   const handleGenerate = async () => {
     if (!uploadedImage) {
-      toast.error("CGまたはスケッチ画像をアップロードしてください");
+      toast.error("実写真をアップロードしてください");
       return;
     }
     setStatus("generating");
     setResultImage(null);
 
     try {
-      const res = await fetch("/api/render", {
+      const res = await fetch("/api/redesign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,6 +112,7 @@ export default function RenderPage() {
           lighting,
           materials,
           strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
           referenceImage: referenceImage || undefined,
         }),
@@ -129,22 +133,26 @@ export default function RenderPage() {
           projectType,
           lighting,
           materials,
+          strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
         beforeUrl
       );
       await saveToActiveProjectIfSelected({
-        mode: "render",
+        mode: "redesign",
         afterUrl: data.output,
         beforeUrl: uploadedImage,
         params: {
           projectType,
           lighting,
           materials,
+          strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
       });
-      toast.success("レンダリングが完成しました");
+      toast.success("リデザインが完成しました");
     } catch (err) {
       setStatus("error");
       toast.error(err instanceof Error ? err.message : "エラーが発生しました");
@@ -153,8 +161,8 @@ export default function RenderPage() {
 
   return (
     <ToolLayout
-      title="AIパース"
-      description="SketchUp / CG / スケッチ → 構造を保った写実化"
+      title="AIリデザイン"
+      description="内観・外観の実写真 → 構造を保持したままデザイン変更"
       paramPanel={
         <>
           <ActiveProjectSelect />
@@ -166,7 +174,7 @@ export default function RenderPage() {
               入力について
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              CG・スケッチ向けです。実写真のデザイン変更はリデザインを使ってください。
+              内観・外観の実写真向けです。用途の選択で専用モデルに分岐します。
             </p>
           </div>
 
@@ -191,6 +199,11 @@ export default function RenderPage() {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {projectType === "interior"
+                ? "モデル: interior-design-sdxl（Depth + ProMax）"
+                : "モデル: multi-controlnet（Canny + Depth）"}
+            </p>
           </div>
 
           <Separator />
@@ -261,8 +274,34 @@ export default function RenderPage() {
               className="w-full"
             />
             <div className="flex justify-between mt-1">
-              <span className="text-xs text-muted-foreground">元画像重視</span>
-              <span className="text-xs text-muted-foreground">AI重視</span>
+              <span className="text-xs text-muted-foreground">質感控えめ</span>
+              <span className="text-xs text-muted-foreground">質感強め</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                構造保持強度
+              </p>
+              <span className="text-xs text-muted-foreground">
+                {structureScale[0].toFixed(2)}
+              </span>
+            </div>
+            <Slider
+              value={structureScale}
+              onValueChange={(val) => {
+                if (Array.isArray(val)) setStructureScale(val as number[]);
+                else setStructureScale([val as number]);
+              }}
+              min={0.4}
+              max={1.0}
+              step={0.05}
+              className="w-full"
+            />
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-muted-foreground">柔軟</span>
+              <span className="text-xs text-muted-foreground">厳密</span>
             </div>
           </div>
 
@@ -271,7 +310,7 @@ export default function RenderPage() {
           <MaterialReferencePicker
             value={referenceImage}
             onChange={setReferenceImage}
-            hint="床・壁・外壁などの質感サンプル。CGの素材表現に反映します"
+            hint="変更したい床・壁・外装などの質感サンプル。内観・外観の実写真に反映します"
           />
 
           <Separator />
@@ -283,7 +322,7 @@ export default function RenderPage() {
             <Textarea
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="例: warm oak flooring, soft morning light"
+              placeholder="例: matte white walls, light oak flooring"
               className="text-sm resize-none h-20"
             />
           </div>
@@ -299,7 +338,7 @@ export default function RenderPage() {
                 <span className="animate-spin">↻</span> 生成中...
               </span>
             ) : (
-              "パースを生成"
+              "リデザインする"
             )}
           </Button>
         </>
@@ -325,7 +364,7 @@ export default function RenderPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            入力（CG / スケッチ）
+            入力（実写真）
           </p>
           <div
             className={`relative flex-1 min-h-64 rounded-xl border-2 border-dashed transition-colors cursor-pointer overflow-hidden ${
@@ -351,7 +390,7 @@ export default function RenderPage() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
                 <div className="text-4xl mb-3 opacity-30">⬆</div>
-                <p className="text-sm font-medium">CG・スケッチをアップロード</p>
+                <p className="text-sm font-medium">実写真をアップロード</p>
                 <p className="text-xs mt-1 opacity-70">PNG · JPG · WEBP</p>
               </div>
             )}
@@ -374,10 +413,10 @@ export default function RenderPage() {
               status={status}
               beforeSrc={uploadedImage}
               afterSrc={resultImage}
-              placeholderIcon="◈"
-              emptyHint="ここに生成結果が表示されます"
-              generatingLabel="レンダリング中..."
-              downloadFileNamePrefix="archirender"
+              placeholderIcon="◇"
+              emptyHint="ここにリデザイン結果が表示されます"
+              generatingLabel="リデザイン中..."
+              downloadFileNamePrefix="redesign"
             />
           </div>
         </div>
@@ -390,6 +429,9 @@ export default function RenderPage() {
         </Badge>
         <Badge variant="secondary" className="text-xs">
           {LIGHTINGS.find((l) => l.value === lighting)?.label}
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          構造 {structureScale[0].toFixed(2)}
         </Badge>
         {materials.map((m) => (
           <Badge key={m} variant="outline" className="text-xs">

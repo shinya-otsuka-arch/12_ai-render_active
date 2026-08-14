@@ -1,28 +1,33 @@
 export type ProjectType = "interior" | "exterior";
-export type Style = "realistic" | "modern" | "japanese" | "minimalist" | "industrial" | "nordic";
 export type Lighting = "daytime" | "sunset" | "night" | "overcast" | "dramatic";
 export type Material = "concrete" | "wood" | "tile" | "brick" | "glass" | "marble";
 
 export interface RenderParams {
   projectType: ProjectType;
-  style: Style;
   lighting: Lighting;
   materials: Material[];
   strength?: number;
+  customPrompt?: string;
+  /** 参考素材を Vision 解析した英語フレーズ */
+  materialReference?: string;
 }
+
+/** 建築設計事務所らしい落ち着いた本物感を促す共通ガードレール */
+export const STYLE_GUARDRAIL_POSITIVE =
+  "honest and refined use of materials, tasteful architectural material palette, understated elegant design, natural authentic textures";
+
+export const STYLE_GUARDRAIL_NEGATIVE =
+  "garish oversaturated colors, neon colors, kitsch, outdated 1990s interior design, cheap fake imitation material texture, printed faux wood grain, plastic laminate imitation, gaudy ornate gold decoration, chandelier, palace-like opulence, tacky bling";
+
+const STRUCTURE_PRESERVE_POSITIVE =
+  "preserve original architecture and layout, keep wall positions, window openings, and camera perspective unchanged";
+
+const STRUCTURE_PRESERVE_NEGATIVE =
+  "changed layout, warped walls, shifted windows, distorted perspective, altered floor plan, moved structural elements";
 
 const projectTypeMap: Record<ProjectType, string> = {
   interior: "architectural interior",
   exterior: "architectural exterior",
-};
-
-const styleMap: Record<Style, string> = {
-  realistic: "photorealistic, professional architectural photography",
-  modern: "contemporary modern architecture, clean lines, minimalist",
-  japanese: "Japanese architecture, wabi-sabi, zen aesthetic, natural materials",
-  minimalist: "ultra minimalist, neutral palette, clean space",
-  industrial: "industrial style, exposed structure, raw materials",
-  nordic: "Scandinavian design, warm wood tones, hygge, light interiors",
 };
 
 const lightingMap: Record<Lighting, string> = {
@@ -43,18 +48,25 @@ const materialMap: Record<Material, string> = {
 };
 
 export function buildPrompt(params: RenderParams): string {
-  const { projectType, style, lighting, materials } = params;
+  const { projectType, lighting, materials, customPrompt, materialReference } = params;
 
   const materialStr =
     materials.length > 0
       ? materials.map((m) => materialMap[m]).join(", ")
       : "";
 
+  const referenceStr = materialReference?.trim()
+    ? `use materials and finishes matching this reference sample: ${materialReference.trim()}`
+    : "";
+
   const parts = [
     `photorealistic ${projectTypeMap[projectType]} render`,
-    styleMap[style],
     lightingMap[lighting],
     materialStr,
+    referenceStr,
+    STYLE_GUARDRAIL_POSITIVE,
+    STRUCTURE_PRESERVE_POSITIVE,
+    customPrompt?.trim(),
     "8k resolution, ultra detailed, professional visualization, award winning architecture",
   ].filter(Boolean);
 
@@ -62,5 +74,9 @@ export function buildPrompt(params: RenderParams): string {
 }
 
 export function buildNegativePrompt(): string {
-  return "blurry, low quality, distorted, ugly, deformed, unrealistic, cartoon, anime, sketch, drawing, painting, watermark, text, signature";
+  return [
+    "blurry, low quality, distorted, ugly, deformed, unrealistic, cartoon, anime, sketch, drawing, painting, watermark, text, signature",
+    STYLE_GUARDRAIL_NEGATIVE,
+    STRUCTURE_PRESERVE_NEGATIVE,
+  ].join(", ");
 }

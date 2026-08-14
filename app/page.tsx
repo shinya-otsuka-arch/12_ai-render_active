@@ -6,40 +6,60 @@ import { Nav } from "@/components/nav";
 const features = [
   {
     href: "/render",
-    badge: "メイン機能",
-    title: "AIパース生成",
+    badge: "CG / スケッチ",
+    title: "AIパース",
     description:
-      "スケッチ・CG・写真をアップロードし、スタイル・照明・素材を選ぶだけ。プロンプト不要でフォトリアルな建築パースを数十秒で生成します。",
-    detail: "内観・外観 / 6スタイル / 5ライティング",
+      "SketchUpやCG・手描きスケッチをアップロードし、構造を保ったまま写実的な建築パースへ変換します。",
+    detail: "CG・スケッチ → 写実化",
     icon: "◈",
     color: "text-amber-700",
+  },
+  {
+    href: "/redesign",
+    badge: "実写真",
+    title: "AIリデザイン",
+    description:
+      "内観・外観の実写真をアップロードし、壁や窓などの構造を保持したまま素材・色・雰囲気を変更します。",
+    detail: "内観・外観の実写真 → デザイン変更",
+    icon: "◇",
+    color: "text-stone-700",
   },
   {
     href: "/staging",
     badge: "インテリア",
     title: "AIステージング",
     description:
-      "空室の写真に家具・インテリアを自動配置。不動産・インテリアのビジュアル提案を瞬時に仕上げます。",
-    detail: "空室写真 → 家具配置 → 即完成",
+      "空室の写真に家具・インテリアを自動配置。不動産・インテリアのビジュアル提案を短時間で仕上げます。",
+    detail: "空室写真 → 家具配置",
     icon: "◉",
     color: "text-stone-600",
   },
   {
     href: "/edit",
-    badge: "編集",
-    title: "AI画像編集",
+    badge: "部分編集",
+    title: "AI編集",
     description:
-      "生成した画像の一部をブラシで塗るだけで、素材・色・オブジェクトを自在に変更。修正依頼にも即座に対応できます。",
-    detail: "マスク描画 → テキスト指示 → 部分変更",
+      "画像の一部をブラシで塗るだけで、素材・色・オブジェクトを変更。修正依頼にもすぐ対応できます。",
+    detail: "マスク指定 → 部分変更",
     icon: "◌",
     color: "text-zinc-600",
+  },
+  {
+    href: "/enhance",
+    badge: "仕上げ",
+    title: "AI高品質化",
+    description:
+      "完成パースや下書きを高解像度・高品質化。創造的なディテール追加から忠実な拡大まで調整できます。",
+    detail: "完成パース → 高品質化",
+    icon: "◎",
+    color: "text-amber-800",
   },
 ];
 
 const steps = [
-  { step: "01", label: "画像をアップロード", desc: "写真・CGパース・スケッチをドラッグ&ドロップ" },
-  { step: "02", label: "パラメータを選択", desc: "用途・スタイル・照明・素材をクリックで選ぶだけ" },
-  { step: "03", label: "生成ボタンを押す", desc: "約30秒でフォトリアルなレンダリングが完成" },
+  { step: "01", label: "画像をアップロード", desc: "用途に合う入力（CG・実写真・空室など）を選択" },
+  { step: "02", label: "パラメータを調整", desc: "用途・照明・素材・強度などをパネルから選択" },
+  { step: "03", label: "生成する", desc: "数十秒で結果を確認し、履歴から再表示も可能" },
 ];
 
 export default function Home() {
@@ -47,49 +67,48 @@ export default function Home() {
     <main className="flex flex-col min-h-screen">
       <Nav />
 
-      {/* ヒーロー */}
       <section className="relative overflow-hidden bg-gradient-to-b from-stone-900 to-stone-800 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <div className="max-w-3xl">
             <Badge variant="secondary" className="mb-4 bg-white/10 text-white border-white/20">
-              AI建築レンダリング
+              社内専用ツール
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl leading-tight">
-              想像するだけ、<br />
-              <span className="text-amber-400">文字はいらない。</span>
+              建築パースを、<br />
+              <span className="text-amber-400">5つの専用モードで。</span>
             </h1>
             <p className="mt-6 text-lg text-stone-300 max-w-2xl">
-              パラメータを選ぶだけで、誰でも正確に生成指示ができる建築家のためのAIツール。
-              長いプロンプトは不要。スタイル・照明・素材をパネルから選択するだけで、
-              プロ品質のレンダリングが数十秒で完成します。
+              CG写実化・実写真のデザイン変更・ステージング・部分編集・高品質化。
+              入力の性質に合わせてモードを分け、社内向けに品質を優先した構成です。
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/render"
                 className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white transition-colors"
               >
-                無料で試す
+                パースを開く
               </Link>
               <Link
-                href="/staging"
+                href="/redesign"
                 className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium border border-white/30 text-white hover:bg-white/10 transition-colors"
               >
-                AIステージングを見る
+                リデザインを開く
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 機能カード */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight">建築・デザインに特化したAIツール</h2>
-            <p className="mt-3 text-muted-foreground">パースから編集・ステージングまで。一気通貫のワークフロー。</p>
+            <h2 className="text-3xl font-bold tracking-tight">5モード構成</h2>
+            <p className="mt-3 text-muted-foreground">
+              入力と目的ごとに最適なモデル・既定値を使い分けます。
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {features.map((feature) => (
               <Link key={feature.href} href={feature.href} className="group block">
                 <Card className="h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 border-border/60">
@@ -110,7 +129,7 @@ export default function Home() {
                       {feature.description}
                     </p>
                     <div className="mt-4 flex items-center text-sm font-medium text-primary">
-                      試してみる <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+                      開く <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -120,12 +139,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 使い方ステップ */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-tight">3ステップで完成</h2>
-            <p className="mt-3 text-muted-foreground">プロンプトは不要。誰でも直感的に使えます。</p>
+            <p className="mt-3 text-muted-foreground">モードを選び、パラメータを調整して生成します。</p>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {steps.map((s, i) => (
@@ -138,23 +156,14 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="mt-12 text-center">
-            <Link
-              href="/render"
-              className="inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
-            >
-              AIパースを試す →
-            </Link>
-          </div>
         </div>
       </section>
 
-      {/* フッター */}
       <footer className="mt-auto border-t bg-background py-8 px-4">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm font-semibold text-primary">ArchiRender</span>
           <p className="text-xs text-muted-foreground">
-            Powered by Replicate AI · 建築・不動産業務支援ツール
+            社内専用 · Powered by Replicate / OpenAI
           </p>
         </div>
       </footer>
