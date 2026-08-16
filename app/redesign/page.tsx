@@ -5,7 +5,8 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl } from "@/lib/resize-image";
+import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
+import { readApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -110,28 +111,34 @@ export default function RedesignPage() {
     setResultImage(null);
 
     try {
-      const res = await fetch("/api/redesign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: uploadedImage,
+      const styleFields = houseStyleToApiFields(houseStyle);
+      const body = await withFittedApiImages(
+        {
+          primary: uploadedImage,
+          reference: referenceImage,
+          styleImages: styleFields.styleImages,
+        },
+        ({ primary, reference, styleImages }) => ({
+          image: primary,
           projectType,
           lighting,
           materials,
           strength: strength[0],
           structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
-          referenceImage: referenceImage || undefined,
-          ...houseStyleToApiFields(houseStyle),
-        }),
+          referenceImage: reference,
+          ...styleFields,
+          styleImages,
+        })
+      );
+
+      const res = await fetch("/api/redesign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "生成に失敗しました");
-      }
-
-      const data = await res.json();
+      const data = await readApiJson<{ output: string }>(res);
       setResultImage(data.output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);

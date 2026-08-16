@@ -5,7 +5,15 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl } from "@/lib/resize-image";
+import {
+  resizeDataUrl,
+  preparePngForApi,
+  prepareImageForApi,
+  API_PRIMARY_MAX_EDGE,
+  API_AUX_MAX_EDGE,
+  API_PAYLOAD_BUDGET,
+} from "@/lib/resize-image";
+import { readApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
@@ -252,23 +260,52 @@ export default function EditPage() {
       "apply the material and texture from the reference sample to the masked area";
 
     try {
+      // OpenAI images.edit は PNG 必須。透過マスクも PNG。予算内になるまで長辺を下げる。
+      const edgeSteps = [API_PRIMARY_MAX_EDGE, 1536, 1280, 1024];
+      let body:
+        | {
+            image: string;
+            mask: string;
+            prompt: string;
+            referenceImage?: string;
+          }
+        | undefined;
+
+      for (const edge of edgeSteps) {
+        const image = await preparePngForApi(cleanImagePng, edge);
+        const maskPrepared = await preparePngForApi(mask, edge);
+        const reference = referenceImage
+          ? await prepareImageForApi(
+              referenceImage,
+              Math.min(edge, API_AUX_MAX_EDGE),
+              0.85
+            )
+          : undefined;
+        const candidate = {
+          image,
+          mask: maskPrepared,
+          prompt: editPrompt,
+          referenceImage: reference,
+        };
+        if (JSON.stringify(candidate).length <= API_PAYLOAD_BUDGET) {
+          body = candidate;
+          break;
+        }
+      }
+
+      if (!body) {
+        throw new Error(
+          "画像が大きすぎます。別の写真で試すか、枚数を減らしてください。"
+        );
+      }
+
       const res = await fetch("/api/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: cleanImagePng,
-          mask,
-          prompt: editPrompt,
-          referenceImage: referenceImage || undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "生成に失敗しました");
-      }
-
-      const data = await res.json();
+      const data = await readApiJson<{ output: string }>(res);
       setResultImage(data.output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);

@@ -5,7 +5,8 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl } from "@/lib/resize-image";
+import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
+import { readApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -49,7 +50,18 @@ interface RenderHistoryParams {
   projectType: ProjectType;
   lighting: Lighting;
   materials: Material[];
+  strength: number;
+  structureScale: number;
   customPrompt?: string;
+}
+
+/** 変換強度(0.3–1.0) ↔ 構造保持(0.4–1.0) の逆マッピング */
+function structureFromStrength(s: number): number {
+  return Math.min(1, Math.max(0.4, 1.0 - ((s - 0.3) / 0.7) * 0.6));
+}
+
+function strengthFromStructure(s: number): number {
+  return Math.min(1, Math.max(0.3, 0.3 + ((1.0 - s) / 0.6) * 0.7));
 }
 
 export default function RenderPage() {
@@ -57,6 +69,7 @@ export default function RenderPage() {
   const [lighting, setLighting] = useState<Lighting>("daytime");
   const [materials, setMaterials] = useState<Material[]>([]);
   const [strength, setStrength] = useState([0.75]);
+  const [structureScale, setStructureScale] = useState([structureFromStrength(0.75)]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(emptyHouseStyleSelection);
@@ -107,27 +120,34 @@ export default function RenderPage() {
     setResultImage(null);
 
     try {
-      const res = await fetch("/api/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image: uploadedImage,
+      const styleFields = houseStyleToApiFields(houseStyle);
+      const body = await withFittedApiImages(
+        {
+          primary: uploadedImage,
+          reference: referenceImage,
+          styleImages: styleFields.styleImages,
+        },
+        ({ primary, reference, styleImages }) => ({
+          image: primary,
           projectType,
           lighting,
           materials,
           strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
-          referenceImage: referenceImage || undefined,
-          ...houseStyleToApiFields(houseStyle),
-        }),
+          referenceImage: reference,
+          ...styleFields,
+          styleImages,
+        })
+      );
+
+      const res = await fetch("/api/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "生成に失敗しました");
-      }
-
-      const data = await res.json();
+      const data = await readApiJson<{ output: string }>(res);
       setResultImage(data.output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);
@@ -137,6 +157,8 @@ export default function RenderPage() {
           projectType,
           lighting,
           materials,
+          strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
         beforeUrl
@@ -149,6 +171,8 @@ export default function RenderPage() {
           projectType,
           lighting,
           materials,
+          strength: strength[0],
+          structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
       });
@@ -264,8 +288,9 @@ export default function RenderPage() {
             <Slider
               value={strength}
               onValueChange={(val) => {
-                if (Array.isArray(val)) setStrength(val as number[]);
-                else setStrength([val as number]);
+                const next = Array.isArray(val) ? (val as number[]) : [val as number];
+                setStrength(next);
+                setStructureScale([structureFromStrength(next[0])]);
               }}
               min={0.3}
               max={1.0}
@@ -276,6 +301,36 @@ export default function RenderPage() {
               <span className="text-xs text-muted-foreground">元画像重視</span>
               <span className="text-xs text-muted-foreground">AI重視</span>
             </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                構造保持強度
+              </p>
+              <span className="text-xs text-muted-foreground">
+                {structureScale[0].toFixed(2)}
+              </span>
+            </div>
+            <Slider
+              value={structureScale}
+              onValueChange={(val) => {
+                const next = Array.isArray(val) ? (val as number[]) : [val as number];
+                setStructureScale(next);
+                setStrength([strengthFromStructure(next[0])]);
+              }}
+              min={0.4}
+              max={1.0}
+              step={0.05}
+              className="w-full"
+            />
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-muted-foreground">柔軟</span>
+              <span className="text-xs text-muted-foreground">厳密</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              変換強度と連動します。質感を強く変えたいときは構造を緩め、線を崩したくないときは厳密側へ。
+            </p>
           </div>
 
           <Separator />
@@ -402,6 +457,9 @@ export default function RenderPage() {
         </Badge>
         <Badge variant="secondary" className="text-xs">
           {LIGHTINGS.find((l) => l.value === lighting)?.label}
+        </Badge>
+        <Badge variant="outline" className="text-xs">
+          構造 {structureScale[0].toFixed(2)}
         </Badge>
         {materials.map((m) => (
           <Badge key={m} variant="outline" className="text-xs">

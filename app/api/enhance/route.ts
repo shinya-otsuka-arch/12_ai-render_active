@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 import { extractOutputUrl } from "@/lib/replicate-output";
 import { STYLE_GUARDRAIL_NEGATIVE } from "@/lib/prompt-builder";
+import { requireUser } from "@/lib/supabase/require-user";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -19,6 +20,9 @@ interface EnhanceBody {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   if (!process.env.REPLICATE_API_TOKEN) {
     return NextResponse.json(
       { error: "REPLICATE_API_TOKEN が設定されていません" },

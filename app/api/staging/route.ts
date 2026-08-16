@@ -10,6 +10,7 @@ import {
   appendMaterialReference,
 } from "@/lib/describe-material";
 import { resolveStyleBrief, applyStyleToPrompts } from "@/lib/resolve-style";
+import { requireUser } from "@/lib/supabase/require-user";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -17,6 +18,9 @@ const replicate = new Replicate({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   if (!process.env.REPLICATE_API_TOKEN) {
     return NextResponse.json(
       { error: "REPLICATE_API_TOKEN が設定されていません" },

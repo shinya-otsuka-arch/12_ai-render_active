@@ -10,18 +10,33 @@ function safeFileName(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, "_").trim() || "project";
 }
 
-function dataUrlToBinary(dataUrl: string): { ext: string; data: Uint8Array } {
-  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
-  if (!match) {
-    return { ext: "bin", data: new TextEncoder().encode(dataUrl) };
+async function urlToBinary(
+  src: string
+): Promise<{ ext: string; data: Uint8Array }> {
+  if (src.startsWith("data:")) {
+    const match = /^data:([^;]+);base64,(.+)$/.exec(src);
+    if (!match) {
+      return { ext: "bin", data: new TextEncoder().encode(src) };
+    }
+    const mime = match[1];
+    const ext =
+      mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+    const binary = atob(match[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { ext, data: bytes };
   }
-  const mime = match[1];
-  const ext =
-    mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-  const binary = atob(match[2]);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return { ext, data: bytes };
+
+  const res = await fetch(src);
+  if (!res.ok) throw new Error("画像の取得に失敗しました");
+  const buf = new Uint8Array(await res.arrayBuffer());
+  const contentType = res.headers.get("content-type") ?? "";
+  const ext = contentType.includes("png")
+    ? "png"
+    : contentType.includes("webp")
+      ? "webp"
+      : "jpg";
+  return { ext, data: buf };
 }
 
 export async function exportProjectZip(project: Project): Promise<void> {
@@ -48,37 +63,36 @@ export async function exportProjectZip(project: Project): Promise<void> {
   const folder = zip.folder("assets");
   if (!folder) throw new Error("ZIP フォルダの作成に失敗しました");
 
-  assets
-    .slice()
-    .reverse()
-    .forEach((asset: ProjectAsset, index) => {
-      const n = String(index + 1).padStart(3, "0");
-      const prefix = `${n}_${asset.mode}`;
+  const ordered = assets.slice().reverse();
+  for (let index = 0; index < ordered.length; index++) {
+    const asset: ProjectAsset = ordered[index];
+    const n = String(index + 1).padStart(3, "0");
+    const prefix = `${n}_${asset.mode}`;
 
-      const after = dataUrlToBinary(asset.afterUrl);
-      folder.file(`${prefix}_after.${after.ext}`, after.data);
+    const after = await urlToBinary(asset.afterUrl);
+    folder.file(`${prefix}_after.${after.ext}`, after.data);
 
-      if (asset.beforeUrl) {
-        const before = dataUrlToBinary(asset.beforeUrl);
-        folder.file(`${prefix}_before.${before.ext}`, before.data);
-      }
+    if (asset.beforeUrl) {
+      const before = await urlToBinary(asset.beforeUrl);
+      folder.file(`${prefix}_before.${before.ext}`, before.data);
+    }
 
-      folder.file(
-        `${prefix}_meta.json`,
-        JSON.stringify(
-          {
-            id: asset.id,
-            mode: asset.mode,
-            modeLabel: MODE_LABELS[asset.mode],
-            createdAt: asset.createdAt,
-            params: asset.params,
-            hasBefore: Boolean(asset.beforeUrl),
-          },
-          null,
-          2
-        )
-      );
-    });
+    folder.file(
+      `${prefix}_meta.json`,
+      JSON.stringify(
+        {
+          id: asset.id,
+          mode: asset.mode,
+          modeLabel: MODE_LABELS[asset.mode],
+          createdAt: asset.createdAt,
+          params: asset.params,
+          hasBefore: Boolean(asset.beforeUrl),
+        },
+        null,
+        2
+      )
+    );
+  }
 
   const blob = await zip.generateAsync({ type: "blob" });
   const date = exportedAt.slice(0, 10);

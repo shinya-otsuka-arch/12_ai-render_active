@@ -5,6 +5,7 @@ import type { RenderParams } from "@/lib/prompt-builder";
 import { extractOutputUrl } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
 import { resolveStyleBrief } from "@/lib/resolve-style";
+import { requireUser } from "@/lib/supabase/require-user";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -16,6 +17,9 @@ const RENDER_MODEL =
   "fofr/sdxl-multi-controlnet-lora:89eb212b3d1366a83e949c12a4b45dfe6b6b313b594cb8268e864931ac9ffb16" as const;
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   if (!process.env.REPLICATE_API_TOKEN) {
     return NextResponse.json(
       { error: "REPLICATE_API_TOKEN が設定されていません" },
@@ -25,6 +29,7 @@ export async function POST(req: NextRequest) {
 
   let body: RenderParams & {
     image: string;
+    structureScale?: number;
     referenceImage?: string;
     styleImages?: string[];
     houseStyleBrief?: string;
@@ -42,6 +47,7 @@ export async function POST(req: NextRequest) {
     lighting,
     materials,
     strength = 0.75,
+    structureScale = 0.8,
     customPrompt,
     referenceImage,
     styleImages,
@@ -52,6 +58,9 @@ export async function POST(req: NextRequest) {
   if (!image) {
     return NextResponse.json({ error: "画像が必要です" }, { status: 400 });
   }
+
+  const clampedStrength = Math.min(1, Math.max(0.3, strength));
+  const clampedStructure = Math.min(1, Math.max(0.4, structureScale));
 
   try {
     let materialReference: string | undefined;
@@ -81,12 +90,12 @@ export async function POST(req: NextRequest) {
         prompt,
         negative_prompt: negativePrompt,
         image,
-        prompt_strength: strength,
+        prompt_strength: clampedStrength,
         sizing_strategy: "input_image",
         controlnet_1: "edge_canny",
         controlnet_1_image: image,
-        controlnet_1_conditioning_scale: 0.9,
-        num_inference_steps: 30,
+        controlnet_1_conditioning_scale: clampedStructure,
+        num_inference_steps: 40,
         guidance_scale: 7.5,
         width: 1024,
         height: 1024,

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { describeStyleReferences } from "@/lib/describe-style";
+import { requireUser } from "@/lib/supabase/require-user";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       { error: "OPENAI_API_KEY が設定されていません" },

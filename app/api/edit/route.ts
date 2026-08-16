@@ -5,6 +5,7 @@ import {
   describeMaterialReference,
   appendMaterialReference,
 } from "@/lib/describe-material";
+import { requireUser } from "@/lib/supabase/require-user";
 
 function dataUrlToBuffer(dataUrl: string): Buffer {
   const base64 = dataUrl.replace(/^data:[^;]+;base64,/, "");
@@ -12,6 +13,9 @@ function dataUrlToBuffer(dataUrl: string): Buffer {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       { error: "OPENAI_API_KEY が設定されていません" },

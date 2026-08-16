@@ -15,28 +15,34 @@ export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [ready, setReady] = useState(false);
 
-  const refresh = useCallback(() => {
-    setProjects(listProjects());
+  const refresh = useCallback(async () => {
+    try {
+      setProjects(await listProjects());
+    } catch (err) {
+      console.error(err);
+      setProjects([]);
+    } finally {
+      setReady(true);
+    }
   }, []);
 
   useEffect(() => {
-    refresh();
-    setReady(true);
+    void refresh();
   }, [refresh]);
 
   const create = useCallback(
-    (name: string) => {
-      const project = createProject(name);
-      refresh();
+    async (name: string) => {
+      const project = await createProject(name);
+      await refresh();
       return project;
     },
     [refresh]
   );
 
   const rename = useCallback(
-    (id: string, name: string) => {
-      renameProject(id, name);
-      refresh();
+    async (id: string, name: string) => {
+      await renameProject(id, name);
+      await refresh();
     },
     [refresh]
   );
@@ -44,7 +50,7 @@ export function useProjects() {
   const remove = useCallback(
     async (id: string) => {
       await deleteProject(id);
-      refresh();
+      await refresh();
     },
     [refresh]
   );
