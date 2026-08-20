@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const hasError = searchParams.get("error") === "auth";
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -50,6 +53,12 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           招待されたメールアドレスでマジックリンクログインします。
         </p>
+
+        {hasError && (
+          <p className="mt-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            リンクが無効か期限切れです。新しいログインリンクを送ってください。
+          </p>
+        )}
 
         {sent ? (
           <p className="mt-8 rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed">
