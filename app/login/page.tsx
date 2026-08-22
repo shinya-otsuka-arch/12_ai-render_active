@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const hasError = searchParams.get("error") === "auth";
   const [email, setEmail] = useState("");
@@ -82,5 +82,13 @@ export default function LoginPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
