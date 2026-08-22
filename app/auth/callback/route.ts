@@ -9,7 +9,9 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    if (error) {
+      console.error("[auth/callback] exchangeCodeForSession failed:", error.message, error);
+    } else {
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
