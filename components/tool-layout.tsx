@@ -29,7 +29,7 @@ export function ToolLayout({
   children,
 }: ToolLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col">
       <Nav />
 
       <div className="flex flex-1 overflow-hidden">
