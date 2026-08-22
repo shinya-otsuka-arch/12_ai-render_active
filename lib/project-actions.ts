@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
 
 export type ProjectMode =
@@ -113,7 +113,9 @@ export async function createProject(name: string): Promise<Project> {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("ログインが必要です");
 
-  const { data, error } = await supabase
+  // getUser() で身元確認済みのため、サービスロールで RLS をバイパスして INSERT
+  const admin = createServiceClient();
+  const { data, error } = await admin
     .from("projects")
     .insert({
       name: name.trim() || "無題の案件",
@@ -124,6 +126,11 @@ export async function createProject(name: string): Promise<Project> {
 
   if (error || !data)
     throw new Error(error?.message ?? "案件の作成に失敗しました");
+
+  // Trigger が未設定の場合に備え、オーナーを project_members に追加
+  await admin
+    .from("project_members")
+    .upsert({ project_id: data.id, user_id: user.id, role: "owner" }, { onConflict: "project_id,user_id" });
 
   return {
     id: data.id,
@@ -163,7 +170,8 @@ export async function createProjectWithLocalId(
     };
   }
 
-  const { data, error } = await supabase
+  const admin = createServiceClient();
+  const { data, error } = await admin
     .from("projects")
     .insert({
       name: name.trim() || "無題の案件",
@@ -175,6 +183,10 @@ export async function createProjectWithLocalId(
 
   if (error || !data)
     throw new Error(error?.message ?? "案件の作成に失敗しました");
+
+  await admin
+    .from("project_members")
+    .upsert({ project_id: data.id, user_id: user.id, role: "owner" }, { onConflict: "project_id,user_id" });
 
   return {
     id: data.id,
