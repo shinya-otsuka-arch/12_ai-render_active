@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: Params) {
     body = {};
   }
 
-  const name = (body.name ?? "").trim() || "無題の案件";
+  const name = (body.name ?? "").trim() || "無題のProject";
 
   const { data, error } = await supabase
     .from("projects")
@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: Params) {
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "案件が見つかりません" }, { status: 404 });
+  if (!data) return NextResponse.json({ error: "Projectが見つかりません" }, { status: 404 });
 
   return NextResponse.json({
     project: {

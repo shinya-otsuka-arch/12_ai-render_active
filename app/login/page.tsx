@@ -2,13 +2,15 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const hasError = searchParams.get("error") === "auth";
+  const hasConfigError =
+    searchParams.get("error") === "config" || !isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -48,11 +50,17 @@ function LoginContent() {
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold tracking-tight text-primary">
-          ArchiRender
+          AI Render
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           招待されたメールアドレスでマジックリンクログインします。
         </p>
+
+        {hasConfigError && (
+          <p className="mt-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            サーバーの Supabase 設定が不足しています。管理者に環境変数の設定を依頼してください。
+          </p>
+        )}
 
         {hasError && (
           <p className="mt-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -60,7 +68,7 @@ function LoginContent() {
           </p>
         )}
 
-        {sent ? (
+        {hasConfigError ? null : sent ? (
           <p className="mt-8 rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed">
             <strong>{email}</strong> 宛にログインリンクを送りました。メール内のリンクからアクセスしてください。
           </p>

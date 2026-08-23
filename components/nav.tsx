@@ -8,8 +8,8 @@ import { useAuthUser } from "@/hooks/use-auth-user";
 import { Button } from "@/components/ui/button";
 
 const links = [
-  { href: "/projects", label: "案件" },
-  { href: "/style-library", label: "作風" },
+  { href: "/projects", label: "Projects" },
+  { href: "/style-library", label: "画像登録" },
   { href: "/render", label: "パース" },
   { href: "/redesign", label: "リデザイン" },
   { href: "/staging", label: "ステージング" },
@@ -30,7 +30,7 @@ export function Nav() {
         <div className="flex h-14 items-center justify-between gap-2">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <span className="text-lg font-bold tracking-tight text-primary">
-              ArchiRender
+              AI Render
             </span>
             <span className="hidden text-xs text-muted-foreground sm:block">
               社内AIレンダリング

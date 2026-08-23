@@ -62,7 +62,7 @@ export function ProjectMembersPanel({
     <section className="mt-8 rounded-lg border border-border p-4">
       <h2 className="text-sm font-semibold">共有メンバー</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        オーナーが招待したメンバーだけがこの案件を閲覧・追加できます。
+        オーナーが招待したメンバーだけがこのProjectを閲覧・追加できます。
       </p>
 
       <ul className="mt-4 space-y-2">

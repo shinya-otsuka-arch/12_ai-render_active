@@ -20,3 +20,15 @@ export function extractOutputUrl(output: unknown): string {
 
   return String(output);
 }
+
+/** 外部 URL を data URL に変換する（canvas の CORS 汚染を避ける） */
+export async function toDataUrlIfRemote(src: string): Promise<string> {
+  if (!src || src.startsWith("data:")) return src;
+  const res = await fetch(src);
+  if (!res.ok) {
+    throw new Error("生成画像の取得に失敗しました");
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  const mime = (res.headers.get("content-type") ?? "image/png").split(";")[0];
+  return `data:${mime || "image/png"};base64,${buf.toString("base64")}`;
+}

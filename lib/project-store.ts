@@ -91,7 +91,7 @@ export async function saveToActiveProjectIfSelected(input: {
     if (!project) return;
     await addAssetToProject({ projectId, ...input });
   } catch (err) {
-    console.error("案件への保存に失敗:", err);
+    console.error("Projectへの保存に失敗:", err);
   }
 }
 

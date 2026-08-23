@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ArchiRender — 社内AI建築レンダリング",
+  title: "AI Render — 社内AI建築レンダリング",
   description:
     "建築・インテリアの社内向けツール。AIパース・AIリデザイン・AIステージング・AI編集・AI高品質化。",
 };

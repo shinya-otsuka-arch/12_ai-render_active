@@ -59,7 +59,7 @@ export default function AdminPage() {
       <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight">メンバー招待</h1>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          ツールへのログイン権を付与します。案件の共有は各案件のオーナーが別途行います。
+          ツールへのログイン権を付与します。Projectの共有は各Projectのオーナーが別途行います。
         </p>
         <div className="mt-8 flex flex-col gap-2 sm:flex-row">
           <input

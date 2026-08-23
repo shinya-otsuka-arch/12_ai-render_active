@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 import { buildPrompt, buildNegativePrompt } from "@/lib/prompt-builder";
 import type { RenderParams } from "@/lib/prompt-builder";
-import { extractOutputUrl } from "@/lib/replicate-output";
+import { extractOutputUrl, toDataUrlIfRemote } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
 import { resolveStyleBrief } from "@/lib/resolve-style";
 import { requireUser } from "@/lib/supabase/require-user";
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     projectType,
     lighting,
     materials,
+    partFinishes,
     strength = 0.75,
     structureScale = 0.8,
     customPrompt,
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       projectType,
       lighting,
       materials,
+      partFinishes,
       customPrompt,
       materialReference,
       styleReference: styleBrief,
@@ -104,7 +106,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ output: extractOutputUrl(output) });
+    const outputUrl = extractOutputUrl(output);
+    return NextResponse.json({ output: await toDataUrlIfRemote(outputUrl) });
   } catch (err) {
     console.error("Render error:", err);
     const message =

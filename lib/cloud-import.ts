@@ -20,8 +20,10 @@ export async function importLegacyLocalData(onProgress?: (msg: string) => void) 
   let styleCount = 0;
 
   for (const project of projects) {
-    onProgress?.(`案件「${project.name}」を取り込み中…`);
-    const cloud = await createProjectWithLocalId(project.name, project.id);
+    onProgress?.(`Project「${project.name}」を取り込み中…`);
+    const cloudResult = await createProjectWithLocalId(project.name, project.id);
+    if (!cloudResult.ok) throw new Error(cloudResult.error);
+    const cloud = cloudResult.data;
     projectCount += 1;
 
     const assets = await listLegacyAssets(project.id);

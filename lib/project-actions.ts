@@ -2,6 +2,12 @@
 
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
+import {
+  actionFail,
+  actionOk,
+  errorMessage,
+  type ActionResult,
+} from "@/lib/action-result";
 
 export type ProjectMode =
   | "render"
@@ -67,135 +73,159 @@ function dataUrlToBuffer(
   };
 }
 
-export async function listProjects(): Promise<Project[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+export async function listProjects(): Promise<ActionResult<Project[]>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return actionOk([]);
 
-  const { data: memberships, error: memErr } = await supabase
-    .from("project_members")
-    .select("project_id, role")
-    .eq("user_id", user.id);
-  if (memErr) throw new Error(memErr.message);
+    const { data: memberships, error: memErr } = await supabase
+      .from("project_members")
+      .select("project_id, role")
+      .eq("user_id", user.id);
+    if (memErr) return actionFail(memErr.message);
 
-  const roleByProject = new Map(
-    (memberships ?? []).map((m) => [
-      m.project_id,
-      m.role as "owner" | "member",
-    ])
-  );
-  const ids = [...roleByProject.keys()];
-  if (ids.length === 0) return [];
+    const roleByProject = new Map(
+      (memberships ?? []).map((m) => [
+        m.project_id,
+        m.role as "owner" | "member",
+      ])
+    );
+    const ids = [...roleByProject.keys()];
+    if (ids.length === 0) return actionOk([]);
 
-  const { data, error } = await supabase
-    .from("projects")
-    .select("id, name, owner_id, created_at, updated_at")
-    .in("id", ids)
-    .order("updated_at", { ascending: false });
-  if (error) throw new Error(error.message);
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, name, owner_id, created_at, updated_at")
+      .in("id", ids)
+      .order("updated_at", { ascending: false });
+    if (error) return actionFail(error.message);
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    ownerId: row.owner_id,
-    myRole: roleByProject.get(row.id),
-  }));
+    return actionOk(
+      (data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        ownerId: row.owner_id,
+        myRole: roleByProject.get(row.id),
+      }))
+    );
+  } catch (err) {
+    return actionFail(errorMessage(err, "Projectsの取得に失敗しました"));
+  }
 }
 
-export async function createProject(name: string): Promise<Project> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("ログインが必要です");
+export async function createProject(
+  name: string
+): Promise<ActionResult<Project>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return actionFail("ログインが必要です");
 
-  // getUser() で身元確認済みのため、サービスロールで RLS をバイパスして INSERT
-  const admin = createServiceClient();
-  const { data, error } = await admin
-    .from("projects")
-    .insert({
-      name: name.trim() || "無題の案件",
-      owner_id: user.id,
-    })
-    .select("id, name, owner_id, created_at, updated_at")
-    .single();
+    // getUser() で身元確認済みのため、サービスロールで RLS をバイパスして INSERT
+    const admin = createServiceClient();
+    const { data, error } = await admin
+      .from("projects")
+      .insert({
+        name: name.trim() || "無題のProject",
+        owner_id: user.id,
+      })
+      .select("id, name, owner_id, created_at, updated_at")
+      .single();
 
-  if (error || !data)
-    throw new Error(error?.message ?? "案件の作成に失敗しました");
+    if (error || !data) {
+      return actionFail(error?.message ?? "Projectの作成に失敗しました");
+    }
 
-  // Trigger が未設定の場合に備え、オーナーを project_members に追加
-  await admin
-    .from("project_members")
-    .upsert({ project_id: data.id, user_id: user.id, role: "owner" }, { onConflict: "project_id,user_id" });
+    // Trigger が未設定の場合に備え、オーナーを project_members に追加
+    await admin
+      .from("project_members")
+      .upsert(
+        { project_id: data.id, user_id: user.id, role: "owner" },
+        { onConflict: "project_id,user_id" }
+      );
 
-  return {
-    id: data.id,
-    name: data.name,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-    ownerId: data.owner_id,
-    myRole: "owner",
-  };
+    return actionOk({
+      id: data.id,
+      name: data.name,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      ownerId: data.owner_id,
+      myRole: "owner",
+    });
+  } catch (err) {
+    return actionFail(errorMessage(err, "Projectの作成に失敗しました"));
+  }
 }
 
 export async function createProjectWithLocalId(
   name: string,
   localId: string
-): Promise<Project> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("ログインが必要です");
+): Promise<ActionResult<Project>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return actionFail("ログインが必要です");
 
-  const { data: existing } = await supabase
-    .from("projects")
-    .select("id, name, owner_id, created_at, updated_at")
-    .eq("local_id", localId)
-    .eq("owner_id", user.id)
-    .maybeSingle();
+    const { data: existing } = await supabase
+      .from("projects")
+      .select("id, name, owner_id, created_at, updated_at")
+      .eq("local_id", localId)
+      .eq("owner_id", user.id)
+      .maybeSingle();
 
-  if (existing) {
-    return {
-      id: existing.id,
-      name: existing.name,
-      createdAt: existing.created_at,
-      updatedAt: existing.updated_at,
-      ownerId: existing.owner_id,
+    if (existing) {
+      return actionOk({
+        id: existing.id,
+        name: existing.name,
+        createdAt: existing.created_at,
+        updatedAt: existing.updated_at,
+        ownerId: existing.owner_id,
+        myRole: "owner",
+      });
+    }
+
+    const admin = createServiceClient();
+    const { data, error } = await admin
+      .from("projects")
+      .insert({
+        name: name.trim() || "無題のProject",
+        owner_id: user.id,
+        local_id: localId,
+      })
+      .select("id, name, owner_id, created_at, updated_at")
+      .single();
+
+    if (error || !data) {
+      return actionFail(error?.message ?? "Projectの作成に失敗しました");
+    }
+
+    await admin
+      .from("project_members")
+      .upsert(
+        { project_id: data.id, user_id: user.id, role: "owner" },
+        { onConflict: "project_id,user_id" }
+      );
+
+    return actionOk({
+      id: data.id,
+      name: data.name,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      ownerId: data.owner_id,
       myRole: "owner",
-    };
+    });
+  } catch (err) {
+    return actionFail(errorMessage(err, "Projectの作成に失敗しました"));
   }
-
-  const admin = createServiceClient();
-  const { data, error } = await admin
-    .from("projects")
-    .insert({
-      name: name.trim() || "無題の案件",
-      owner_id: user.id,
-      local_id: localId,
-    })
-    .select("id, name, owner_id, created_at, updated_at")
-    .single();
-
-  if (error || !data)
-    throw new Error(error?.message ?? "案件の作成に失敗しました");
-
-  await admin
-    .from("project_members")
-    .upsert({ project_id: data.id, user_id: user.id, role: "owner" }, { onConflict: "project_id,user_id" });
-
-  return {
-    id: data.id,
-    name: data.name,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-    ownerId: data.owner_id,
-    myRole: "owner",
-  };
 }
 
 export async function renameProject(
@@ -206,7 +236,7 @@ export async function renameProject(
   const { data, error } = await supabase
     .from("projects")
     .update({
-      name: name.trim() || "無題の案件",
+      name: name.trim() || "無題のProject",
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

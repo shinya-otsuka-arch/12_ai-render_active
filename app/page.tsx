@@ -161,7 +161,7 @@ export default function Home() {
 
       <footer className="mt-auto border-t bg-background py-8 px-4">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-sm font-semibold text-primary">ArchiRender</span>
+          <span className="text-sm font-semibold text-primary">AI Render</span>
           <p className="text-xs text-muted-foreground">
             社内専用 · Powered by Replicate / OpenAI
           </p>

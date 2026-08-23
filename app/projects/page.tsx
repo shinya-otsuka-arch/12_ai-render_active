@@ -46,7 +46,7 @@ export default function ProjectsPage() {
 
   const handleCreate = async () => {
     if (!newName.trim()) {
-      toast.error("案件名を入力してください");
+      toast.error("Project名を入力してください");
       return;
     }
     setCreating(true);
@@ -62,11 +62,11 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`案件「${name}」と成果物をすべて削除しますか？（オーナーのみ）`))
+    if (!confirm(`Project「${name}」と成果物をすべて削除しますか？（オーナーのみ）`))
       return;
     try {
       await remove(id);
-      toast.success("案件を削除しました");
+      toast.success("Projectを削除しました");
       await refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "削除に失敗しました");
@@ -77,9 +77,9 @@ export default function ProjectsPage() {
     <main className="flex min-h-screen flex-col">
       <Nav />
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
-        <h1 className="text-2xl font-bold tracking-tight">案件</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          生成結果を案件単位でクラウド共有できます。共有は案件詳細からメンバーを追加してください。
+          生成結果をProject単位でクラウド共有できます。共有はProject詳細からメンバーを追加してください。
         </p>
 
         <div className="mt-6">
@@ -95,7 +95,7 @@ export default function ProjectsPage() {
             className="h-9 flex-1 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
           <Button onClick={() => void handleCreate()} disabled={creating}>
-            案件を作成
+            Projectを作成
           </Button>
         </div>
 
@@ -107,7 +107,7 @@ export default function ProjectsPage() {
           <ul className="mt-8 space-y-2">
             {sorted.length === 0 ? (
               <li className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                まだ案件がありません
+                まだProjectがありません
               </li>
             ) : (
               sorted.map((p) => (

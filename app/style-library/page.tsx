@@ -45,7 +45,7 @@ export default function StyleLibraryPage() {
         await addStyleLibraryImage(dataUrl, file.name);
       }
       await refresh();
-      toast.success("作風ライブラリに追加しました");
+      toast.success("画像登録に追加しました");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "追加に失敗しました");
     } finally {
@@ -75,7 +75,7 @@ export default function StyleLibraryPage() {
       const data = await readApiJson<{ styleBrief: string }>(res);
       await Promise.all(items.map((i) => updateStyleBrief(i.id, data.styleBrief)));
       await refresh();
-      toast.success("作風を解析してキャッシュしました");
+      toast.success("登録画像を解析してキャッシュしました");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "解析に失敗しました");
     } finally {
@@ -105,13 +105,13 @@ export default function StyleLibraryPage() {
           href="/projects"
           className="text-xs text-muted-foreground hover:text-foreground"
         >
-          ← 案件一覧
+          ← Projects
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
-          社内作風ライブラリ
+          画像登録
         </h1>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          ログイン全員で共有する作風事例です。削除は追加した本人のみ可能です。
+          ログイン全員で共有する参考画像です。削除は追加した本人のみ可能です。
         </p>
 
         <div className="mt-6">
@@ -127,7 +127,7 @@ export default function StyleLibraryPage() {
             onClick={() => void handleAnalyze()}
             disabled={busy || items.length === 0}
           >
-            {busy ? "処理中..." : "作風を再解析"}
+            {busy ? "処理中..." : "登録画像を再解析"}
           </Button>
           <input
             ref={inputRef}
@@ -153,7 +153,7 @@ export default function StyleLibraryPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.imageUrl}
-                  alt={item.label || "作風事例"}
+                  alt={item.label || "登録画像"}
                   className="aspect-square w-full object-cover"
                 />
                 <div className="flex items-center justify-between gap-1 p-2">

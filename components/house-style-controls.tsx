@@ -77,7 +77,7 @@ export function HouseStyleControls({ value, onChange }: HouseStyleControlsProps)
     <div className="space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-          社内作風
+          画像登録
         </p>
         <label className="flex items-start gap-2 text-sm cursor-pointer">
           <input
@@ -90,7 +90,7 @@ export function HouseStyleControls({ value, onChange }: HouseStyleControlsProps)
             }}
           />
           <span>
-            社内作風ライブラリを適用
+            画像登録を適用
             <span className="block text-xs text-muted-foreground mt-0.5">
               {libraryCount === 0
                 ? "ライブラリに事例がありません"
@@ -104,7 +104,7 @@ export function HouseStyleControls({ value, onChange }: HouseStyleControlsProps)
           href="/style-library"
           className="mt-2 inline-block text-xs text-primary underline"
         >
-          作風ライブラリを管理
+          画像登録を管理
         </Link>
       </div>
 

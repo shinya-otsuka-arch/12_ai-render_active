@@ -23,7 +23,7 @@ export function LocalImportBanner({ onDone }: { onDone?: () => void }) {
     try {
       const result = await importLegacyLocalData(setProgress);
       toast.success(
-        `取り込み完了: 案件 ${result.projectCount}・成果物 ${result.assetCount}・作風 ${result.styleCount}`
+        `取り込み完了: Projects ${result.projectCount}・成果物 ${result.assetCount}・作風 ${result.styleCount}`
       );
       setVisible(false);
       onDone?.();
@@ -44,7 +44,7 @@ export function LocalImportBanner({ onDone }: { onDone?: () => void }) {
     <div className="mb-6 rounded-lg border border-border bg-muted/40 p-4">
       <p className="text-sm font-medium">この端末にローカルデータがあります</p>
       <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-        以前ブラウザに保存した案件・作風をクラウドへ取り込めます。重複はスキップします。
+        以前ブラウザに保存したProjects・作風をクラウドへ取り込めます。重複はスキップします。
       </p>
       {progress && (
         <p className="mt-2 text-xs text-muted-foreground">{progress}</p>

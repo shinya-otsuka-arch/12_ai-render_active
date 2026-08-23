@@ -1,3 +1,8 @@
+import {
+  buildPartFinishPrompt,
+  type PartFinishSelection,
+} from "@/lib/finish-catalog";
+
 export type ProjectType = "interior" | "exterior";
 export type Lighting = "daytime" | "sunset" | "night" | "overcast" | "dramatic";
 export type Material = "concrete" | "wood" | "tile" | "brick" | "glass" | "marble";
@@ -5,7 +10,8 @@ export type Material = "concrete" | "wood" | "tile" | "brick" | "glass" | "marbl
 export interface RenderParams {
   projectType: ProjectType;
   lighting: Lighting;
-  materials: Material[];
+  materials?: Material[];
+  partFinishes?: PartFinishSelection;
   strength?: number;
   customPrompt?: string;
   /** 参考素材を Vision 解析した英語フレーズ */
@@ -56,14 +62,16 @@ export function buildPrompt(params: RenderParams): string {
     projectType,
     lighting,
     materials,
+    partFinishes,
     customPrompt,
     materialReference,
     styleReference,
     styleStrength = 0.75,
   } = params;
 
-  const materialStr =
-    materials.length > 0
+  const materialStr = partFinishes
+    ? buildPartFinishPrompt(partFinishes, projectType)
+    : materials && materials.length > 0
       ? materials.map((m) => materialMap[m]).join(", ")
       : "";
 

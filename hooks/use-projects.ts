@@ -10,6 +10,7 @@ import {
   setActiveProjectId,
   type Project,
 } from "@/lib/project-store";
+import { toast } from "sonner";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -17,9 +18,16 @@ export function useProjects() {
 
   const refresh = useCallback(async () => {
     try {
-      setProjects(await listProjects());
+      const result = await listProjects();
+      if (!result.ok) {
+        toast.error(result.error);
+        setProjects([]);
+        return;
+      }
+      setProjects(result.data);
     } catch (err) {
       console.error(err);
+      toast.error("Projectsの取得に失敗しました");
       setProjects([]);
     } finally {
       setReady(true);
@@ -32,9 +40,10 @@ export function useProjects() {
 
   const create = useCallback(
     async (name: string) => {
-      const project = await createProject(name);
+      const result = await createProject(name);
+      if (!result.ok) throw new Error(result.error);
       await refresh();
-      return project;
+      return result.data;
     },
     [refresh]
   );

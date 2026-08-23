@@ -12,15 +12,15 @@ export function useAuthUser() {
 
   const refresh = useCallback(async () => {
     try {
-      const user = await getAuthUser();
-      if (!user) {
+      const result = await getAuthUser();
+      if (!result.ok || !result.data) {
         setEmail(null);
         setUserId(null);
         setIsAdmin(false);
       } else {
-        setEmail(user.email);
-        setUserId(user.id);
-        setIsAdmin(user.isAdmin);
+        setEmail(result.data.email);
+        setUserId(result.data.id);
+        setIsAdmin(result.data.isAdmin);
       }
     } catch {
       setEmail(null);

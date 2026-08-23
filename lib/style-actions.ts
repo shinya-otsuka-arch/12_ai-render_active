@@ -101,7 +101,7 @@ export async function addStyleLibraryImage(input: {
     .from("style_library")
     .select("id", { count: "exact", head: true });
   if ((currentCount ?? 0) >= MAX_ITEMS) {
-    throw new Error(`作風ライブラリは最大${MAX_ITEMS}枚までです`);
+    throw new Error(`画像登録は最大${MAX_ITEMS}枚までです`);
   }
 
   const { buffer, contentType } = dataUrlToBuffer(input.dataUrl);
@@ -128,7 +128,7 @@ export async function addStyleLibraryImage(input: {
 
   if (error || !data) {
     await supabase.storage.from(BUCKET).remove([path]);
-    throw new Error(error?.message ?? "作風の追加に失敗しました");
+    throw new Error(error?.message ?? "画像登録の追加に失敗しました");
   }
 
   const imageUrl = await makeSignedUrl(supabase, data.image_path);

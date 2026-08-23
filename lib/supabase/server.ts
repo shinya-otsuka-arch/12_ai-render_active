@@ -3,29 +3,35 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/database.types";
 
+function requirePublicConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) {
+    throw new Error("Supabase の環境変数が設定されていません");
+  }
+  return { url, anon };
+}
+
 export async function createClient() {
+  const { url, anon } = requirePublicConfig();
   const cookieStore = await cookies();
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server Component — ignore if middleware already refreshed session
-          }
-        },
+  const supabase = createServerClient<Database>(url, anon, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // Server Component — ignore if middleware already refreshed session
+        }
+      },
+    },
+  });
 
   // skipAutoInitialize: true (set by @supabase/ssr) defers session loading.
   // getSession() fires INITIAL_SESSION which sets changedAccessToken used by
@@ -42,9 +48,12 @@ export async function createClient() {
  * auth.getUser() で身元確認を先に行うこと。
  */
 export function createServiceClient() {
-  return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const { url } = requirePublicConfig();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY が設定されていません");
+  }
+  return createSupabaseClient<Database>(url, key, {
+    auth: { persistSession: false },
+  });
 }

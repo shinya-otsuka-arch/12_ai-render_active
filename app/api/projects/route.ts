@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     body = {};
   }
 
-  const name = (body.name ?? "").trim() || "無題の案件";
+  const name = (body.name ?? "").trim() || "無題のProject";
   const localId = body.localId ?? null;
 
   if (localId) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
   if (error || !data)
     return NextResponse.json(
-      { error: error?.message ?? "案件の作成に失敗しました" },
+      { error: error?.message ?? "Projectの作成に失敗しました" },
       { status: 500 }
     );
 
