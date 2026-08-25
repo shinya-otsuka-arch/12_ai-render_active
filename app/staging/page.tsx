@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import {
   HouseStyleControls,
   emptyHouseStyleSelection,
@@ -264,6 +265,15 @@ export default function StagingPage() {
               {STYLES.find((s) => s.value === params.style)?.label}
             </>
           )}
+        />
+      }
+      materialAssistant={
+        <MaterialSearchAssistant
+          mode="空室のインテリアステージング"
+          onUseMaterial={setReferenceImage}
+          onUseStyle={(dataUrl) =>
+            setHouseStyle((prev) => ({ ...prev, styleImages: [dataUrl] }))
+          }
         />
       }
     >

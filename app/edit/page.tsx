@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 
@@ -461,6 +462,12 @@ export default function EditPage() {
           }}
           onClear={clearHistory}
           renderLabel={(params) => <>{params.prompt}</>}
+        />
+      }
+      materialAssistant={
+        <MaterialSearchAssistant
+          mode="建築画像の部分編集"
+          onUseMaterial={setReferenceImage}
         />
       }
     >

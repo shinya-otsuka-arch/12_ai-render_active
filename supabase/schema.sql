@@ -183,7 +183,7 @@ create policy "project_members_delete_owner"
 create table if not exists public.project_assets (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
-  mode text not null check (mode in ('render', 'redesign', 'staging', 'edit', 'enhance')),
+  mode text not null check (mode in ('render', 'redesign', 'staging', 'edit', 'enhance', 'gemini')),
   after_path text not null,
   before_path text,
   params jsonb,
@@ -268,6 +268,10 @@ insert into storage.buckets (id, name, public)
 values ('style-library', 'style-library', false)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('generated-images', 'generated-images', false)
+on conflict (id) do nothing;
+
 -- Storage: project-assets path = {project_id}/{filename}
 create policy "project_assets_storage_select"
   on storage.objects for select
@@ -313,4 +317,13 @@ create policy "style_library_storage_delete"
   using (
     bucket_id = 'style-library'
     and owner = auth.uid()
+  );
+
+-- Storage: generated-images path = {user_id}/{filename}
+create policy "generated_images_storage_select"
+  on storage.objects for select
+  to authenticated
+  using (
+    bucket_id = 'generated-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
   );

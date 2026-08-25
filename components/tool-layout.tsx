@@ -8,13 +8,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { HistoryIcon, SlidersHorizontalIcon } from "lucide-react";
+import { HistoryIcon, SearchIcon, SlidersHorizontalIcon } from "lucide-react";
 
 interface ToolLayoutProps {
   title: string;
   description: string;
   paramPanel: React.ReactNode;
   historyPanel?: React.ReactNode;
+  materialAssistant?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export function ToolLayout({
   description,
   paramPanel,
   historyPanel,
+  materialAssistant,
   children,
 }: ToolLayoutProps) {
   return (
@@ -60,22 +62,41 @@ export function ToolLayout({
               </div>
             </div>
 
-            {historyPanel && (
-              <Sheet>
-                <SheetTrigger
-                  className={mobileTriggerClass}
-                  aria-label="履歴を開く"
-                >
-                  <HistoryIcon className="size-4" />
-                </SheetTrigger>
-                <SheetContent side="right">
-                  <SheetHeader>
-                    <SheetTitle>履歴</SheetTitle>
-                  </SheetHeader>
-                  {historyPanel}
-                </SheetContent>
-              </Sheet>
-            )}
+            <div className="flex items-center gap-1">
+              {materialAssistant && (
+                <Sheet>
+                  <SheetTrigger
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+                    aria-label="AI素材検索を開く"
+                  >
+                    <SearchIcon className="size-4" />
+                    <span className="hidden sm:inline">AI素材検索</span>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+                    <SheetHeader>
+                      <SheetTitle>AI素材検索</SheetTitle>
+                    </SheetHeader>
+                    {materialAssistant}
+                  </SheetContent>
+                </Sheet>
+              )}
+              {historyPanel && (
+                <Sheet>
+                  <SheetTrigger
+                    className={mobileTriggerClass}
+                    aria-label="履歴を開く"
+                  >
+                    <HistoryIcon className="size-4" />
+                  </SheetTrigger>
+                  <SheetContent side="right">
+                    <SheetHeader>
+                      <SheetTitle>履歴</SheetTitle>
+                    </SheetHeader>
+                    {historyPanel}
+                  </SheetContent>
+                </Sheet>
+              )}
+            </div>
           </div>
 
           {children}

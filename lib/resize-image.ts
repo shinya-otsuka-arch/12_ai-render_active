@@ -34,10 +34,10 @@ export function resizeDataUrl(
 
 /** Vercel の ~4.5MB 上限に余裕を持たせた JSON ボディ上限（文字数） */
 export const API_PAYLOAD_BUDGET = Math.floor(3.5 * 1024 * 1024);
-export const API_PRIMARY_MAX_EDGE = 1920;
+export const API_PRIMARY_MAX_EDGE = 2048;
 export const API_AUX_MAX_EDGE = 1280;
 
-const QUALITY_STEPS = [0.88, 0.75, 0.65] as const;
+const QUALITY_STEPS = [0.95, 0.9, 0.85] as const;
 
 const PAYLOAD_TOO_LARGE =
   "画像が大きすぎます。別の写真で試すか、枚数を減らしてください。";
@@ -63,11 +63,11 @@ function drawScaled(img: HTMLImageElement, maxEdge: number): HTMLCanvasElement {
   return canvas;
 }
 
-/** API 送信用: 常に JPEG 再エンコード（PNG 巨大化を避ける） */
+/** API 送信用: 高品質JPEGへ再エンコード（PNG巨大化と輪郭劣化の両方を抑える） */
 export async function prepareImageForApi(
   dataUrl: string,
   maxEdge = API_PRIMARY_MAX_EDGE,
-  quality = 0.88
+  quality = 0.95
 ): Promise<string> {
   const img = await loadImage(dataUrl);
   const canvas = drawScaled(img, maxEdge);

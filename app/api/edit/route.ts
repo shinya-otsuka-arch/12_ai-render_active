@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
       image: await toFile(imageBuffer, "image.png", { type: "image/png" }),
       mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
       prompt: fullPrompt,
-      size: "1024x1024",
-      quality: "medium",
+      size: "auto",
+      quality: "high",
     });
 
     const b64 = result.data?.[0]?.b64_json;

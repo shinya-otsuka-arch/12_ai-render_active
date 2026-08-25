@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 
@@ -294,6 +295,9 @@ export default function EnhancePage() {
             </>
           )}
         />
+      }
+      materialAssistant={
+        <MaterialSearchAssistant mode="建築パースの高品質化参考" />
       }
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">

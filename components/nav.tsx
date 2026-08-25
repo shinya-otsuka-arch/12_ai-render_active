@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -11,18 +11,21 @@ const links = [
   { href: "/projects", label: "Projects" },
   { href: "/style-library", label: "画像登録" },
   { href: "/render", label: "パース" },
-  { href: "/redesign", label: "リデザイン" },
+  { href: "/redesign", label: "Reデザイン" },
   { href: "/staging", label: "ステージング" },
   { href: "/edit", label: "編集" },
   { href: "/enhance", label: "高品質化" },
+  { href: "/gemini", label: "オリジナル画像" },
 ];
 
 export function Nav() {
   const pathname = usePathname();
   const { email, isAdmin, ready, signOut } = useAuthUser();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-sm">

@@ -85,7 +85,7 @@ export type Database = {
         Row: {
           id: string;
           project_id: string;
-          mode: "render" | "redesign" | "staging" | "edit" | "enhance";
+          mode: "render" | "redesign" | "staging" | "edit" | "enhance" | "gemini";
           after_path: string;
           before_path: string | null;
           params: Json | null;
@@ -96,7 +96,7 @@ export type Database = {
         Insert: {
           id?: string;
           project_id: string;
-          mode: "render" | "redesign" | "staging" | "edit" | "enhance";
+          mode: "render" | "redesign" | "staging" | "edit" | "enhance" | "gemini";
           after_path: string;
           before_path?: string | null;
           params?: Json | null;
@@ -107,7 +107,7 @@ export type Database = {
         Update: {
           id?: string;
           project_id?: string;
-          mode?: "render" | "redesign" | "staging" | "edit" | "enhance";
+          mode?: "render" | "redesign" | "staging" | "edit" | "enhance" | "gemini";
           after_path?: string;
           before_path?: string | null;
           params?: Json | null;

@@ -70,10 +70,8 @@ function buildExteriorInput(
     controlnet_2: "depth_midas",
     controlnet_2_image: image,
     controlnet_2_conditioning_scale: structureScale,
-    num_inference_steps: 30,
+    num_inference_steps: 50,
     guidance_scale: 7.5,
-    width: 1024,
-    height: 1024,
     disable_safety_checker: true,
     apply_watermark: false,
   };

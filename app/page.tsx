@@ -17,7 +17,7 @@ const features = [
   {
     href: "/redesign",
     badge: "実写真",
-    title: "AIリデザイン",
+    title: "AIReデザイン",
     description:
       "内観・外観の実写真をアップロードし、壁や窓などの構造を保持したまま素材・色・雰囲気を変更します。",
     detail: "内観・外観の実写真 → デザイン変更",
@@ -54,6 +54,16 @@ const features = [
     icon: "◎",
     color: "text-amber-800",
   },
+  {
+    href: "/gemini",
+    badge: "自由生成",
+    title: "オリジナル画像生成",
+    description:
+      "テキストや参考画像から自由に画像を生成。元画像をベースにした編集や、会話形式での細かな修正が可能です。",
+    detail: "自由生成・画像編集 → 会話で反復",
+    icon: "✦",
+    color: "text-blue-700",
+  },
 ];
 
 const steps = [
@@ -67,43 +77,43 @@ export default function Home() {
     <main className="flex flex-col min-h-screen">
       <Nav />
 
-      <section className="relative overflow-hidden bg-gradient-to-b from-stone-900 to-stone-800 text-white">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="max-w-3xl">
-            <Badge variant="secondary" className="mb-4 bg-white/10 text-white border-white/20">
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-stone-950 text-white">
+        {/* subtle grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        {/* warm gradient accent */}
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-950/40 via-transparent to-transparent" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-32 sm:py-44 lg:px-8">
+          <div className="max-w-2xl">
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/80">
               社内専用ツール
-            </Badge>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl leading-tight">
-              建築パースを、<br />
-              <span className="text-amber-400">5つの専用モードで。</span>
-            </h1>
-            <p className="mt-6 text-lg text-stone-300 max-w-2xl">
-              CG写実化・実写真のデザイン変更・ステージング・部分編集・高品質化。
-              入力の性質に合わせてモードを分け、社内向けに品質を優先した構成です。
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/render"
-                className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white transition-colors"
-              >
-                パースを開く
-              </Link>
-              <Link
-                href="/redesign"
-                className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium border border-white/30 text-white hover:bg-white/10 transition-colors"
-              >
-                リデザインを開く
-              </Link>
-            </div>
+            <h1 className="text-5xl font-bold tracking-tight sm:text-7xl leading-[1.1]">
+              建築パースを、
+              <br />
+              <span className="text-amber-400">AIで。</span>
+            </h1>
+            <p className="mt-7 text-base text-stone-400 max-w-lg leading-relaxed">
+              CG写実化・Reデザイン・ステージング・部分編集・高品質化・オリジナル画像生成。
+              入力の性質に合わせてモードを使い分けます。
+            </p>
           </div>
         </div>
       </section>
 
+      {/* Features */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight">5モード構成</h2>
+            <h2 className="text-3xl font-bold tracking-tight">6モード構成</h2>
             <p className="mt-3 text-muted-foreground">
               入力と目的ごとに最適なモデル・既定値を使い分けます。
             </p>
@@ -139,6 +149,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Steps */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
         <div className="mx-auto max-w-7xl">
           <div className="text-center mb-12">
@@ -163,7 +174,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm font-semibold text-primary">AI Render</span>
           <p className="text-xs text-muted-foreground">
-            社内専用 · Powered by Replicate / OpenAI
+            社内専用 · Powered by Replicate / OpenAI / Google AI
           </p>
         </div>
       </footer>

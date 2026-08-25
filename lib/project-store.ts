@@ -97,8 +97,9 @@ export async function saveToActiveProjectIfSelected(input: {
 
 export const MODE_LABELS: Record<ProjectMode, string> = {
   render: "パース",
-  redesign: "リデザイン",
+  redesign: "Reデザイン",
   staging: "ステージング",
   edit: "編集",
   enhance: "高品質化",
+  gemini: "オリジナル画像生成",
 };

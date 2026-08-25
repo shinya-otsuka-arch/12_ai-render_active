@@ -14,6 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import {
   HouseStyleControls,
   emptyHouseStyleSelection,
@@ -167,7 +168,7 @@ export default function RedesignPage() {
           customPrompt: customPrompt.trim() || undefined,
         },
       });
-      toast.success("リデザインが完成しました");
+      toast.success("Reデザインが完成しました");
     } catch (err) {
       setStatus("error");
       toast.error(err instanceof Error ? err.message : "エラーが発生しました");
@@ -176,7 +177,7 @@ export default function RedesignPage() {
 
   return (
     <ToolLayout
-      title="AIリデザイン"
+      title="AIReデザイン"
       description="内観・外観の実写真 → 構造を保持したままデザイン変更"
       paramPanel={
         <>
@@ -357,7 +358,7 @@ export default function RedesignPage() {
                 <span className="animate-spin">↻</span> 生成中...
               </span>
             ) : (
-              "リデザインする"
+              "Reデザインする"
             )}
           </Button>
         </>
@@ -377,6 +378,15 @@ export default function RedesignPage() {
               {LIGHTINGS.find((l) => l.value === params.lighting)?.label}
             </>
           )}
+        />
+      }
+      materialAssistant={
+        <MaterialSearchAssistant
+          mode="実写真の建築リデザイン"
+          onUseMaterial={setReferenceImage}
+          onUseStyle={(dataUrl) =>
+            setHouseStyle((prev) => ({ ...prev, styleImages: [dataUrl] }))
+          }
         />
       }
     >
@@ -433,8 +443,8 @@ export default function RedesignPage() {
               beforeSrc={uploadedImage}
               afterSrc={resultImage}
               placeholderIcon="◇"
-              emptyHint="ここにリデザイン結果が表示されます"
-              generatingLabel="リデザイン中..."
+              emptyHint="ここにReデザイン結果が表示されます"
+              generatingLabel="Reデザイン中..."
               downloadFileNamePrefix="redesign"
             />
           </div>

@@ -14,7 +14,8 @@ export type ProjectMode =
   | "redesign"
   | "staging"
   | "edit"
-  | "enhance";
+  | "enhance"
+  | "gemini";
 
 export interface Project {
   id: string;

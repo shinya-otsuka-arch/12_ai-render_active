@@ -20,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
+import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import {
   HouseStyleControls,
   emptyHouseStyleSelection,
@@ -63,15 +64,6 @@ interface RenderHistoryParams {
   strength: number;
   structureScale: number;
   customPrompt?: string;
-}
-
-/** 変換強度(0.3–1.0) ↔ 構造保持(0.4–1.0) の逆マッピング */
-function structureFromStrength(s: number): number {
-  return Math.min(1, Math.max(0.4, 1.0 - ((s - 0.3) / 0.7) * 0.6));
-}
-
-function strengthFromStructure(s: number): number {
-  return Math.min(1, Math.max(0.3, 0.3 + ((1.0 - s) / 0.6) * 0.7));
 }
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
@@ -122,9 +114,7 @@ export default function RenderPage() {
   const [brushSize, setBrushSize] = useState([24]);
   const [erase, setErase] = useState(false);
   const [strength, setStrength] = useState([0.75]);
-  const [structureScale, setStructureScale] = useState([
-    structureFromStrength(0.75),
-  ]);
+  const [structureScale, setStructureScale] = useState([0.85]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(
@@ -421,7 +411,6 @@ export default function RenderPage() {
               onValueChange={(val) => {
                 const next = Array.isArray(val) ? (val as number[]) : [val as number];
                 setStrength(next);
-                setStructureScale([structureFromStrength(next[0])]);
               }}
               min={0.3}
               max={1.0}
@@ -448,7 +437,6 @@ export default function RenderPage() {
               onValueChange={(val) => {
                 const next = Array.isArray(val) ? (val as number[]) : [val as number];
                 setStructureScale(next);
-                setStrength([strengthFromStructure(next[0])]);
               }}
               min={0.4}
               max={1.0}
@@ -460,7 +448,7 @@ export default function RenderPage() {
               <span className="text-xs text-muted-foreground">厳密</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              変換強度と連動します。質感を強く変えたいときは構造を緩め、線を崩したくないときは厳密側へ。
+              変換強度とは独立して調整できます。壁・窓・輪郭を崩したくない場合は厳密側を推奨します。
             </p>
           </div>
 
@@ -517,6 +505,15 @@ export default function RenderPage() {
               · {LIGHTINGS.find((l) => l.value === params.lighting)?.label}
             </>
           )}
+        />
+      }
+      materialAssistant={
+        <MaterialSearchAssistant
+          mode="CG・スケッチの建築パース"
+          onUseMaterial={setReferenceImage}
+          onUseStyle={(dataUrl) =>
+            setHouseStyle((prev) => ({ ...prev, styleImages: [dataUrl] }))
+          }
         />
       }
     >
