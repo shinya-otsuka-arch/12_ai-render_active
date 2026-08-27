@@ -7,12 +7,13 @@ import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
 import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
+import { outputsFromResponse } from "@/lib/variant-outputs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
+import { PromptRefineField } from "@/components/prompt-refine-field";
 import { ActiveProjectSelect } from "@/components/active-project-select";
 import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import {
@@ -60,13 +61,15 @@ export default function RedesignPage() {
   const [projectType, setProjectType] = useState<ProjectType>("interior");
   const [lighting, setLighting] = useState<Lighting>("daytime");
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [strength, setStrength] = useState([0.7]);
-  const [structureScale, setStructureScale] = useState([0.8]);
+  const [strength, setStrength] = useState([0.55]);
+  const [structureScale, setStructureScale] = useState([0.92]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(emptyHouseStyleSelection);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(0);
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [isDragging, setIsDragging] = useState(false);
 
@@ -110,6 +113,8 @@ export default function RedesignPage() {
     }
     setStatus("generating");
     setResultImage(null);
+    setCandidates([]);
+    setSelectedCandidate(0);
 
     try {
       const styleFields = houseStyleToApiFields(houseStyle);
@@ -139,12 +144,17 @@ export default function RedesignPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await readApiJson<{ output: string }>(res);
-      setResultImage(data.output);
+      const data = await readApiJson<{ output: string; outputs?: string[] }>(res);
+      const outputs = outputsFromResponse(data);
+      const output = outputs[0];
+      if (!output) throw new Error("画像生成に失敗しました");
+      setCandidates(outputs);
+      setSelectedCandidate(0);
+      setResultImage(output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);
       addEntry(
-        data.output,
+        output,
         {
           projectType,
           lighting,
@@ -157,7 +167,7 @@ export default function RedesignPage() {
       );
       await saveToActiveProjectIfSelected({
         mode: "redesign",
-        afterUrl: data.output,
+        afterUrl: output,
         beforeUrl: uploadedImage,
         params: {
           projectType,
@@ -335,17 +345,21 @@ export default function RedesignPage() {
 
           <Separator />
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              任意プロンプト
-            </p>
-            <Textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="例: matte white walls, light oak flooring"
-              className="text-sm resize-none h-20"
-            />
-          </div>
+          <PromptRefineField
+            mode="redesign"
+            label="任意プロンプト"
+            value={customPrompt}
+            onChange={setCustomPrompt}
+            placeholder="例: matte white walls, light oak flooring"
+            context={{
+              hasBaseImage: Boolean(uploadedImage),
+              hasMaterialRefs: Boolean(referenceImage),
+              hasStyleImages:
+                Boolean(houseStyle.houseStyleBrief) ||
+                houseStyle.styleImages.length > 0,
+            }}
+            disabled={status === "generating"}
+          />
 
           <Button
             onClick={handleGenerate}
@@ -368,6 +382,8 @@ export default function RedesignPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
+            setCandidates([item.url]);
+            setSelectedCandidate(0);
             if (item.beforeUrl) setUploadedImage(item.beforeUrl);
             setStatus("done");
           }}
@@ -442,9 +458,18 @@ export default function RedesignPage() {
               status={status}
               beforeSrc={uploadedImage}
               afterSrc={resultImage}
+              candidates={candidates}
+              selectedCandidate={selectedCandidate}
+              onSelectCandidate={(index) => {
+                const next = candidates[index];
+                if (!next) return;
+                setSelectedCandidate(index);
+                setResultImage(next);
+              }}
               placeholderIcon="◇"
               emptyHint="ここにReデザイン結果が表示されます"
               generatingLabel="Reデザイン中..."
+              generatingHint="候補を3枚生成します。1〜2分かかることがあります"
               downloadFileNamePrefix="redesign"
             />
           </div>

@@ -11,6 +11,9 @@ interface ResultViewerProps {
   status: ResultStatus;
   beforeSrc?: string | null;
   afterSrc?: string | null;
+  candidates?: string[];
+  selectedCandidate?: number;
+  onSelectCandidate?: (index: number) => void;
   placeholderIcon?: React.ReactNode;
   emptyHint?: string;
   generatingLabel?: string;
@@ -64,10 +67,45 @@ function BeforeAfterSlider({ beforeSrc, afterSrc }: { beforeSrc: string; afterSr
   );
 }
 
+function CandidateStrip({
+  candidates,
+  selectedCandidate,
+  onSelectCandidate,
+}: {
+  candidates: string[];
+  selectedCandidate: number;
+  onSelectCandidate?: (index: number) => void;
+}) {
+  if (candidates.length < 2) return null;
+  return (
+    <div className="flex shrink-0 gap-2 overflow-x-auto border-t bg-background/80 px-2 py-2">
+      {candidates.map((src, index) => (
+        <button
+          key={`${index}-${src.slice(0, 24)}`}
+          type="button"
+          onClick={() => onSelectCandidate?.(index)}
+          className={`relative size-14 shrink-0 overflow-hidden rounded-md border-2 ${
+            index === selectedCandidate
+              ? "border-primary"
+              : "border-transparent hover:border-border"
+          }`}
+          aria-label={`候補${index + 1}`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={`候補${index + 1}`} className="h-full w-full object-cover" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ResultViewer({
   status,
   beforeSrc,
   afterSrc,
+  candidates,
+  selectedCandidate = 0,
+  onSelectCandidate,
   placeholderIcon,
   emptyHint = "ここに生成結果が表示されます",
   generatingLabel = "生成中...",
@@ -128,6 +166,11 @@ export function ResultViewer({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={beforeSrc} alt="元画像" className="absolute inset-0 h-full w-full object-contain" />
           </TabsContent>
+          <CandidateStrip
+            candidates={candidates ?? [afterSrc]}
+            selectedCandidate={selectedCandidate}
+            onSelectCandidate={onSelectCandidate}
+          />
         </Tabs>
       );
     }
@@ -144,6 +187,11 @@ export function ResultViewer({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={afterSrc} alt="生成結果" className="absolute inset-0 h-full w-full object-contain" />
         </div>
+        <CandidateStrip
+          candidates={candidates ?? [afterSrc]}
+          selectedCandidate={selectedCandidate}
+          onSelectCandidate={onSelectCandidate}
+        />
       </div>
     );
   }

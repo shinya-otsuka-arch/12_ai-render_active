@@ -14,18 +14,22 @@ import {
   API_PAYLOAD_BUDGET,
 } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
+import { outputsFromResponse } from "@/lib/variant-outputs";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { PromptRefineField } from "@/components/prompt-refine-field";
 import { Separator } from "@/components/ui/separator";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
 import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
+import {
+  fillShape,
+  MASK_SHAPE_TOOLS,
+  strokeShapePreview,
+  type MaskPoint,
+  type MaskShapeTool,
+} from "@/lib/mask-shapes";
 import { toast } from "sonner";
-
-type DrawMode = "brush" | "eraser";
 
 interface EditHistoryParams {
   prompt: string;
@@ -34,11 +38,12 @@ interface EditHistoryParams {
 export default function EditPage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(0);
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [isDragging, setIsDragging] = useState(false);
-  const [drawMode, setDrawMode] = useState<DrawMode>("brush");
-  const [brushSize, setBrushSize] = useState([24]);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [maskTool, setMaskTool] = useState<MaskShapeTool>("rect");
+  const [erase, setErase] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [hasMask, setHasMask] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -49,27 +54,84 @@ export default function EditPage() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const maskLayerRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const drawingRef = useRef(false);
+  const startRef = useRef<MaskPoint>({ x: 0, y: 0 });
+  const currentRef = useRef<{ end: MaskPoint; points: MaskPoint[] } | null>(null);
 
-  const setupCanvas = useCallback((imageSrc: string) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const img = new Image();
-    img.onload = () => {
-      imageRef.current = img;
-      const container = containerRef.current;
-      const maxW = container?.clientWidth ?? 600;
-      const maxH = container?.clientHeight ?? 500;
-      const scale = Math.min(maxW / img.width, maxH / img.height, 1);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+  const layerHasPaint = (layer: HTMLCanvasElement | null) => {
+    if (!layer) return false;
+    const ctx = layer.getContext("2d");
+    if (!ctx) return false;
+    const data = ctx.getImageData(0, 0, layer.width, layer.height).data;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] > 0) return true;
+    }
+    return false;
+  };
+
+  const redrawDisplay = useCallback(
+    (preview?: { end: MaskPoint; points: MaskPoint[] } | null) => {
+      const canvas = canvasRef.current;
+      const img = imageRef.current;
+      if (!canvas || !img) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-    img.src = imageSrc;
-  }, []);
+      const layer = maskLayerRef.current;
+      if (layer && layerHasPaint(layer)) {
+        const tint = document.createElement("canvas");
+        tint.width = canvas.width;
+        tint.height = canvas.height;
+        const tctx = tint.getContext("2d");
+        if (tctx) {
+          tctx.drawImage(layer, 0, 0);
+          tctx.globalCompositeOperation = "source-in";
+          tctx.fillStyle = "rgba(239, 68, 68, 0.45)";
+          tctx.fillRect(0, 0, tint.width, tint.height);
+          ctx.drawImage(tint, 0, 0);
+        }
+      }
+      if (preview) {
+        strokeShapePreview(
+          ctx,
+          maskTool,
+          startRef.current,
+          preview.end,
+          preview.points
+        );
+      }
+    },
+    [maskTool]
+  );
+
+  const setupCanvas = useCallback(
+    (imageSrc: string) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const img = new Image();
+      img.onload = () => {
+        imageRef.current = img;
+        const container = containerRef.current;
+        const maxW = container?.clientWidth ?? 600;
+        const maxH = container?.clientHeight ?? 500;
+        const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const layer = document.createElement("canvas");
+        layer.width = canvas.width;
+        layer.height = canvas.height;
+        maskLayerRef.current = layer;
+        setHasMask(false);
+        redrawDisplay();
+      };
+      img.src = imageSrc;
+    },
+    [redrawDisplay]
+  );
 
   useEffect(() => {
     if (uploadedImage) setupCanvas(uploadedImage);
@@ -83,64 +145,57 @@ export default function EditPage() {
     const scaleY = canvas.height / rect.height;
     if ("touches" in e) {
       const t = e.touches[0];
+      if (!t) return { x: 0, y: 0 };
       return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
     }
     return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+  const startDraw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    const pos = getPos(e);
+    drawingRef.current = true;
+    startRef.current = pos;
+    currentRef.current = { end: pos, points: [pos] };
+    redrawDisplay(currentRef.current);
+  };
+
+  const moveDraw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    if (!drawingRef.current || !currentRef.current) return;
+    const pos = getPos(e);
+    const points =
+      maskTool === "lasso" ? [...currentRef.current.points, pos] : currentRef.current.points;
+    currentRef.current = { end: pos, points };
+    redrawDisplay(currentRef.current);
+  };
+
+  const endDraw = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx || !canvas) return;
-
-    const { x, y } = getPos(e);
-
-    if (drawMode === "eraser") {
-      // 消しゴム: 元の画像を復元
-      ctx.save();
-      ctx.globalCompositeOperation = "source-over";
-      const img = imageRef.current;
-      if (img) {
-        const scaleX = canvas.width / img.width;
-        const scaleY = canvas.height / img.height;
-        const r = brushSize[0];
-        ctx.drawImage(
-          img,
-          (x - r) / scaleX,
-          (y - r) / scaleY,
-          (r * 2) / scaleX,
-          (r * 2) / scaleY,
-          x - r,
-          y - r,
-          r * 2,
-          r * 2
-        );
-      }
-      ctx.restore();
-    } else {
-      // ブラシ: 半透明の赤で塗る
-      ctx.save();
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(239, 68, 68, 0.5)";
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize[0], 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      setHasMask(true);
+    const layer = maskLayerRef.current;
+    const current = currentRef.current;
+    currentRef.current = null;
+    if (!canvas || !layer || !current) {
+      redrawDisplay();
+      return;
     }
+    const ctx = layer.getContext("2d");
+    if (!ctx) return;
+    fillShape(ctx, maskTool, startRef.current, current.end, current.points, {
+      erase,
+      fillStyle: "rgba(255,255,255,1)",
+    });
+    setHasMask(layerHasPaint(layer));
+    redrawDisplay();
   };
 
-  const startDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    draw(e);
-  };
-
-  const stopDraw = () => setIsDrawing(false);
-
-  const handleTouchDraw = (e: React.TouchEvent<HTMLCanvasElement>) => {
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    draw(e);
+    moveDraw(e);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -150,54 +205,31 @@ export default function EditPage() {
 
   const clearMask = () => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx || !canvas || !imageRef.current) return;
-    ctx.drawImage(imageRef.current, 0, 0, canvas.width, canvas.height);
+    const layer = maskLayerRef.current;
+    if (!canvas || !layer) return;
+    const ctx = layer.getContext("2d");
+    ctx?.clearRect(0, 0, layer.width, layer.height);
     setHasMask(false);
+    redrawDisplay();
   };
 
   const getMaskDataUrl = (): string => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-    if (!canvas || !img) return "";
-
-    // マスクキャンバス生成: 赤い部分 → 白、それ以外 → 黒
+    const layer = maskLayerRef.current;
+    if (!layer) return "";
     const offscreen = document.createElement("canvas");
-    offscreen.width = canvas.width;
-    offscreen.height = canvas.height;
+    offscreen.width = layer.width;
+    offscreen.height = layer.height;
     const ctx = offscreen.getContext("2d");
-    if (!ctx) return "";
-
-    const canvasCtx = canvas.getContext("2d");
-    if (!canvasCtx) return "";
-
-    const displayData = canvasCtx.getImageData(0, 0, canvas.width, canvas.height);
-    const imgData = ctx.createImageData(canvas.width, canvas.height);
-
-    // 元画像ピクセル取得
-    const offImg = document.createElement("canvas");
-    offImg.width = canvas.width;
-    offImg.height = canvas.height;
-    const offImgCtx = offImg.getContext("2d");
-    offImgCtx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const origData = offImgCtx?.getImageData(0, 0, canvas.width, canvas.height);
-
-    for (let i = 0; i < displayData.data.length; i += 4) {
-      const dispR = displayData.data[i];
-      const dispG = displayData.data[i + 1];
-      const origR = origData?.data[i] ?? 0;
-      const origG = origData?.data[i + 1] ?? 0;
-
-      // 赤チャンネルが増加 & 緑が元と差がある = 塗られた部分
-      const painted = dispR > origR + 30 && dispG < origG - 10;
-
-      // OpenAI gpt-image-2 形式: 透明(A=0)=編集エリア、不透明(A=255)=維持エリア
+    const src = layer.getContext("2d")?.getImageData(0, 0, layer.width, layer.height);
+    if (!ctx || !src) return "";
+    const imgData = ctx.createImageData(layer.width, layer.height);
+    for (let i = 0; i < src.data.length; i += 4) {
+      const painted = src.data[i + 3] > 0;
       imgData.data[i] = 255;
       imgData.data[i + 1] = 255;
       imgData.data[i + 2] = 255;
       imgData.data[i + 3] = painted ? 0 : 255;
     }
-
     ctx.putImageData(imgData, 0, 0);
     return offscreen.toDataURL("image/png");
   };
@@ -230,7 +262,7 @@ export default function EditPage() {
       return;
     }
     if (!hasMask) {
-      toast.error("編集したい部分をブラシで塗ってください");
+      toast.error("編集したい部分を範囲で囲んでください");
       return;
     }
     if (!prompt.trim() && !referenceImage) {
@@ -255,6 +287,8 @@ export default function EditPage() {
 
     setStatus("generating");
     setResultImage(null);
+    setCandidates([]);
+    setSelectedCandidate(0);
 
     const editPrompt =
       prompt.trim() ||
@@ -306,14 +340,19 @@ export default function EditPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await readApiJson<{ output: string }>(res);
-      setResultImage(data.output);
+      const data = await readApiJson<{ output: string; outputs?: string[] }>(res);
+      const outputs = outputsFromResponse(data);
+      const output = outputs[0];
+      if (!output) throw new Error("画像生成に失敗しました");
+      setCandidates(outputs);
+      setSelectedCandidate(0);
+      setResultImage(output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(data.output, { prompt: editPrompt }, beforeUrl);
+      addEntry(output, { prompt: editPrompt }, beforeUrl);
       await saveToActiveProjectIfSelected({
         mode: "edit",
-        afterUrl: data.output,
+        afterUrl: output,
         beforeUrl: uploadedImage,
         params: { prompt: editPrompt },
       });
@@ -327,7 +366,7 @@ export default function EditPage() {
   return (
     <ToolLayout
       title="AI編集"
-      description="変更したい箇所を赤で塗って → 何に変えるか入力するだけ"
+      description="変更したい箇所を範囲で囲んで → 何に変えるか入力するだけ"
       paramPanel={
         <>
           <ActiveProjectSelect />
@@ -340,7 +379,7 @@ export default function EditPage() {
             </p>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside leading-relaxed">
               <li>画像をアップロード</li>
-              <li>変更したい箇所をブラシで塗る</li>
+              <li>変更したい箇所を範囲で囲む</li>
               <li>変更内容を入力</li>
               <li>生成ボタンを押す</li>
             </ol>
@@ -348,50 +387,46 @@ export default function EditPage() {
 
           <Separator />
 
-          {/* ブラシ設定 */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
               ツール
             </p>
+            <div className="grid grid-cols-3 gap-1.5 mb-2">
+              {MASK_SHAPE_TOOLS.map((item) => (
+                <button
+                  key={item.value}
+                  onClick={() => setMaskTool(item.value)}
+                  className={`rounded-md px-2 py-2 text-sm font-medium transition-colors ${
+                    maskTool === item.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-2 gap-1.5 mb-3">
               <button
-                onClick={() => setDrawMode("brush")}
+                onClick={() => setErase(false)}
                 className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  drawMode === "brush"
+                  !erase
                     ? "bg-red-500 text-white"
                     : "bg-secondary text-secondary-foreground hover:bg-accent"
                 }`}
               >
-                🖌 ブラシ
+                追加
               </button>
               <button
-                onClick={() => setDrawMode("eraser")}
+                onClick={() => setErase(true)}
                 className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  drawMode === "eraser"
+                  erase
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:bg-accent"
                 }`}
               >
-                ✕ 消しゴム
+                削除
               </button>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs">ブラシサイズ</Label>
-                <span className="text-xs text-muted-foreground">{brushSize[0]}px</span>
-              </div>
-              <Slider
-                value={brushSize}
-                onValueChange={(val) => {
-                  if (Array.isArray(val)) setBrushSize(val as number[]);
-                  else setBrushSize([val as number]);
-                }}
-                min={8}
-                max={80}
-                step={4}
-                className="w-full"
-              />
             </div>
 
             <Button
@@ -399,9 +434,9 @@ export default function EditPage() {
               size="sm"
               onClick={clearMask}
               disabled={!uploadedImage}
-              className="w-full mt-3"
+              className="w-full"
             >
-              マスクをリセット
+              範囲を消す
             </Button>
           </div>
 
@@ -410,26 +445,26 @@ export default function EditPage() {
           <MaterialReferencePicker
             value={referenceImage}
             onChange={setReferenceImage}
-            hint="ブラシで塗った範囲に、この素材の質感を適用します"
+            hint="囲んだ範囲に、この素材の質感を適用します"
           />
 
           <Separator />
 
-          {/* 変更内容 */}
-          <div>
-            <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              変更内容
-            </Label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={"例: 白い大理石の壁\n例: 木製フローリング\n例: 大きな観葉植物"}
-              className="mt-2 text-sm resize-none h-24"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              塗った部分をどう変えるか日本語で入力
-            </p>
-          </div>
+          <PromptRefineField
+            mode="edit"
+            label="変更内容"
+            value={prompt}
+            onChange={setPrompt}
+            placeholder={"例: 白い大理石の壁\n例: 木製フローリング\n例: 大きな観葉植物"}
+            hint="囲んだ部分をどう変えるか日本語で入力"
+            textareaClassName="text-sm resize-none h-24"
+            context={{
+              hasBaseImage: Boolean(uploadedImage),
+              hasMask,
+              hasMaterialRefs: Boolean(referenceImage),
+            }}
+            disabled={status === "generating"}
+          />
 
           <Button
             onClick={handleGenerate}
@@ -457,6 +492,8 @@ export default function EditPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
+            setCandidates([item.url]);
+            setSelectedCandidate(0);
             if (item.beforeUrl) setUploadedImage(item.beforeUrl);
             setStatus("done");
           }}
@@ -492,14 +529,14 @@ export default function EditPage() {
               <canvas
                 ref={canvasRef}
                 className="max-w-full max-h-full touch-none cursor-crosshair"
-                style={{ cursor: drawMode === "eraser" ? "cell" : "crosshair" }}
+                style={{ cursor: erase ? "cell" : "crosshair" }}
                 onMouseDown={startDraw}
-                onMouseMove={draw}
-                onMouseUp={stopDraw}
-                onMouseLeave={stopDraw}
+                onMouseMove={moveDraw}
+                onMouseUp={endDraw}
+                onMouseLeave={endDraw}
                 onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchDraw}
-                onTouchEnd={stopDraw}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={endDraw}
               />
             ) : (
               <div
@@ -526,7 +563,9 @@ export default function EditPage() {
           />
           {uploadedImage && (
             <p className="text-xs text-muted-foreground text-center">
-              {drawMode === "brush" ? "🖌 ブラシで変更したい部分を塗ってください" : "✕ 消しゴムでマスクを消去"}
+              {erase
+                ? "囲んだ範囲のマスクを消します"
+                : "変更したい部分を四角・丸・自由曲線で囲んでください"}
             </p>
           )}
         </div>
@@ -541,10 +580,18 @@ export default function EditPage() {
               status={status}
               beforeSrc={uploadedImage}
               afterSrc={resultImage}
+              candidates={candidates}
+              selectedCandidate={selectedCandidate}
+              onSelectCandidate={(index) => {
+                const next = candidates[index];
+                if (!next) return;
+                setSelectedCandidate(index);
+                setResultImage(next);
+              }}
               placeholderIcon="◌"
               emptyHint="編集結果がここに表示されます"
               generatingLabel="編集中..."
-              generatingHint="約20〜40秒かかります"
+              generatingHint="候補を3枚生成します。1〜2分かかることがあります"
               downloadFileNamePrefix="edited"
             />
           </div>

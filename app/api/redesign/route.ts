@@ -6,6 +6,7 @@ import { extractOutputUrl } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
 import { resolveStyleBrief } from "@/lib/resolve-style";
 import { requireUser } from "@/lib/supabase/require-user";
+import { collectVariantUrls, variantSeeds } from "@/lib/variant-outputs";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -37,7 +38,8 @@ function buildInteriorInput(
   prompt: string,
   negativePrompt: string,
   strength: number,
-  structureScale: number
+  structureScale: number,
+  seed: number
 ) {
   return {
     image,
@@ -48,6 +50,7 @@ function buildInteriorInput(
     num_inference_steps: 50,
     guidance_scale: 7.5,
     refiner_strength: Math.min(0.6, 0.25 + strength * 0.35),
+    seed,
   };
 }
 
@@ -56,7 +59,8 @@ function buildExteriorInput(
   prompt: string,
   negativePrompt: string,
   strength: number,
-  structureScale: number
+  structureScale: number,
+  seed: number
 ) {
   return {
     prompt,
@@ -74,6 +78,7 @@ function buildExteriorInput(
     guidance_scale: 7.5,
     disable_safety_checker: true,
     apply_watermark: false,
+    seed,
   };
 }
 
@@ -100,8 +105,8 @@ export async function POST(req: NextRequest) {
     projectType,
     lighting,
     materials,
-    strength = 0.7,
-    structureScale = 0.8,
+    strength = 0.55,
+    structureScale = 0.92,
     customPrompt,
     referenceImage,
     styleImages,
@@ -143,28 +148,34 @@ export async function POST(req: NextRequest) {
     });
     const negativePrompt = buildNegativePrompt(styleBrief ? resolvedStrength : 0);
 
-    const output =
-      projectType === "interior"
-        ? await replicate.run(INTERIOR_MODEL, {
-            input: buildInteriorInput(
-              image,
-              prompt,
-              negativePrompt,
-              clampedStrength,
-              clampedStructure
-            ),
-          })
-        : await replicate.run(EXTERIOR_MODEL, {
-            input: buildExteriorInput(
-              image,
-              prompt,
-              negativePrompt,
-              clampedStrength,
-              clampedStructure
-            ),
-          });
+    const runOne = async (seed: number) => {
+      const output =
+        projectType === "interior"
+          ? await replicate.run(INTERIOR_MODEL, {
+              input: buildInteriorInput(
+                image,
+                prompt,
+                negativePrompt,
+                clampedStrength,
+                clampedStructure,
+                seed
+              ),
+            })
+          : await replicate.run(EXTERIOR_MODEL, {
+              input: buildExteriorInput(
+                image,
+                prompt,
+                negativePrompt,
+                clampedStrength,
+                clampedStructure,
+                seed
+              ),
+            });
+      return extractOutputUrl(output);
+    };
 
-    return NextResponse.json({ output: extractOutputUrl(output) });
+    const outputs = await collectVariantUrls(variantSeeds().map((seed) => runOne(seed)));
+    return NextResponse.json({ output: outputs[0], outputs });
   } catch (err) {
     console.error("Redesign error:", err);
     const message =

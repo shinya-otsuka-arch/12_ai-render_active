@@ -6,6 +6,7 @@ import { extractOutputUrl, toDataUrlIfRemote } from "@/lib/replicate-output";
 import { describeMaterialReference } from "@/lib/describe-material";
 import { resolveStyleBrief } from "@/lib/resolve-style";
 import { requireUser } from "@/lib/supabase/require-user";
+import { collectVariantUrls, variantSeeds } from "@/lib/variant-outputs";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -47,8 +48,8 @@ export async function POST(req: NextRequest) {
     lighting,
     materials,
     partFinishes,
-    strength = 0.75,
-    structureScale = 0.8,
+    strength = 0.55,
+    structureScale = 0.92,
     customPrompt,
     referenceImage,
     styleImages,
@@ -87,28 +88,32 @@ export async function POST(req: NextRequest) {
     });
     const negativePrompt = buildNegativePrompt(styleBrief ? resolvedStrength : 0);
 
-    const output = await replicate.run(RENDER_MODEL, {
-      input: {
-        prompt,
-        negative_prompt: negativePrompt,
-        image,
-        prompt_strength: clampedStrength,
-        sizing_strategy: "input_image",
-        controlnet_1: "edge_canny",
-        controlnet_1_image: image,
-        controlnet_1_conditioning_scale: clampedStructure,
-        controlnet_2: "depth_midas",
-        controlnet_2_image: image,
-        controlnet_2_conditioning_scale: clampedStructure,
-        num_inference_steps: 50,
-        guidance_scale: 7.5,
-        disable_safety_checker: true,
-        apply_watermark: false,
-      },
-    });
+    const runOne = async (seed: number) => {
+      const output = await replicate.run(RENDER_MODEL, {
+        input: {
+          prompt,
+          negative_prompt: negativePrompt,
+          image,
+          prompt_strength: clampedStrength,
+          sizing_strategy: "input_image",
+          controlnet_1: "edge_canny",
+          controlnet_1_image: image,
+          controlnet_1_conditioning_scale: clampedStructure,
+          controlnet_2: "depth_midas",
+          controlnet_2_image: image,
+          controlnet_2_conditioning_scale: clampedStructure,
+          num_inference_steps: 50,
+          guidance_scale: 7.5,
+          disable_safety_checker: true,
+          apply_watermark: false,
+          seed,
+        },
+      });
+      return toDataUrlIfRemote(extractOutputUrl(output));
+    };
 
-    const outputUrl = extractOutputUrl(output);
-    return NextResponse.json({ output: await toDataUrlIfRemote(outputUrl) });
+    const outputs = await collectVariantUrls(variantSeeds().map((seed) => runOne(seed)));
+    return NextResponse.json({ output: outputs[0], outputs });
   } catch (err) {
     console.error("Render error:", err);
     const message =

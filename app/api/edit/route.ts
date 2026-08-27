@@ -6,6 +6,7 @@ import {
   appendMaterialReference,
 } from "@/lib/describe-material";
 import { requireUser } from "@/lib/supabase/require-user";
+import { collectVariantUrls } from "@/lib/variant-outputs";
 
 function dataUrlToBuffer(dataUrl: string): Buffer {
   const base64 = dataUrl.replace(/^data:[^;]+;base64,/, "");
@@ -60,21 +61,24 @@ export async function POST(req: NextRequest) {
     const imageBuffer = dataUrlToBuffer(image);
     const maskBuffer = dataUrlToBuffer(mask);
 
-    const result = await openai.images.edit({
-      model: "gpt-image-2",
-      image: await toFile(imageBuffer, "image.png", { type: "image/png" }),
-      mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
-      prompt: fullPrompt,
-      size: "auto",
-      quality: "high",
-    });
+    const runOne = async () => {
+      const result = await openai.images.edit({
+        model: "gpt-image-2",
+        image: await toFile(imageBuffer, "image.png", { type: "image/png" }),
+        mask: await toFile(maskBuffer, "mask.png", { type: "image/png" }),
+        prompt: fullPrompt,
+        size: "auto",
+        quality: "high",
+      });
+      const b64 = result.data?.[0]?.b64_json;
+      if (!b64) {
+        throw new Error("画像データが取得できませんでした");
+      }
+      return `data:image/png;base64,${b64}`;
+    };
 
-    const b64 = result.data?.[0]?.b64_json;
-    if (!b64) {
-      throw new Error("画像データが取得できませんでした");
-    }
-
-    return NextResponse.json({ output: `data:image/png;base64,${b64}` });
+    const outputs = await collectVariantUrls([runOne(), runOne(), runOne()]);
+    return NextResponse.json({ output: outputs[0], outputs });
   } catch (err) {
     console.error("OpenAI error:", err);
     return NextResponse.json(

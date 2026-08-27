@@ -9,6 +9,12 @@ import {
   useState,
 } from "react";
 import { PART_OVERLAY, type FinishPart } from "@/lib/finish-catalog";
+import {
+  fillShape,
+  strokeShapePreview,
+  type MaskPoint,
+  type MaskShapeTool,
+} from "@/lib/mask-shapes";
 
 export interface PartMaskCanvasHandle {
   getMasks: () => Partial<Record<FinishPart, string>>;
@@ -19,7 +25,7 @@ export interface PartMaskCanvasHandle {
 interface PartMaskCanvasProps {
   imageSrc: string;
   activePart: FinishPart;
-  brushSize: number;
+  tool: MaskShapeTool;
   erase: boolean;
 }
 
@@ -62,39 +68,54 @@ function layerToOpenAiMask(layer: HTMLCanvasElement): string {
 }
 
 export const PartMaskCanvas = forwardRef<PartMaskCanvasHandle, PartMaskCanvasProps>(
-  function PartMaskCanvas({ imageSrc, activePart, brushSize, erase }, ref) {
+  function PartMaskCanvas({ imageSrc, activePart, tool, erase }, ref) {
     const displayRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement | null>(null);
     const layersRef = useRef<Partial<Record<FinishPart, HTMLCanvasElement>>>({});
     const drawingRef = useRef(false);
+    const startRef = useRef<MaskPoint>({ x: 0, y: 0 });
+    const pointsRef = useRef<MaskPoint[]>([]);
+    const currentRef = useRef<{ end: MaskPoint; points: MaskPoint[] } | null>(null);
     const [ready, setReady] = useState(false);
 
-    const redraw = useCallback(() => {
-      const canvas = displayRef.current;
-      const img = imageRef.current;
-      if (!canvas || !img) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      for (const [part, layer] of Object.entries(layersRef.current) as [
-        FinishPart,
-        HTMLCanvasElement,
-      ][]) {
-        if (!layerHasPaint(layer)) continue;
-        const tint = document.createElement("canvas");
-        tint.width = canvas.width;
-        tint.height = canvas.height;
-        const tctx = tint.getContext("2d");
-        if (!tctx) continue;
-        tctx.drawImage(layer, 0, 0);
-        tctx.globalCompositeOperation = "source-in";
-        tctx.fillStyle = PART_OVERLAY[part];
-        tctx.fillRect(0, 0, tint.width, tint.height);
-        ctx.drawImage(tint, 0, 0);
-      }
-    }, []);
+    const redraw = useCallback(
+      (previewShape?: { end: MaskPoint; points: MaskPoint[] } | null) => {
+        const canvas = displayRef.current;
+        const img = imageRef.current;
+        if (!canvas || !img) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        for (const [part, layer] of Object.entries(layersRef.current) as [
+          FinishPart,
+          HTMLCanvasElement,
+        ][]) {
+          if (!layerHasPaint(layer)) continue;
+          const tint = document.createElement("canvas");
+          tint.width = canvas.width;
+          tint.height = canvas.height;
+          const tctx = tint.getContext("2d");
+          if (!tctx) continue;
+          tctx.drawImage(layer, 0, 0);
+          tctx.globalCompositeOperation = "source-in";
+          tctx.fillStyle = PART_OVERLAY[part];
+          tctx.fillRect(0, 0, tint.width, tint.height);
+          ctx.drawImage(tint, 0, 0);
+        }
+        if (previewShape) {
+          strokeShapePreview(
+            ctx,
+            tool,
+            startRef.current,
+            previewShape.end,
+            previewShape.points
+          );
+        }
+      },
+      [tool]
+    );
 
     const setup = useCallback(
       (src: string) => {
@@ -122,32 +143,6 @@ export const PartMaskCanvas = forwardRef<PartMaskCanvasHandle, PartMaskCanvasPro
       setup(imageSrc);
     }, [imageSrc, setup]);
 
-    const paintAt = (x: number, y: number) => {
-      const canvas = displayRef.current;
-      if (!canvas) return;
-      let layer = layersRef.current[activePart];
-      if (!layer) {
-        layer = makeLayer(canvas.width, canvas.height);
-        layersRef.current[activePart] = layer;
-      }
-      const ctx = layer.getContext("2d");
-      if (!ctx) return;
-      if (erase) {
-        ctx.save();
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.beginPath();
-        ctx.arc(x, y, brushSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else {
-        ctx.fillStyle = "rgba(255,255,255,1)";
-        ctx.beginPath();
-        ctx.arc(x, y, brushSize, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      redraw();
-    };
-
     const posFromEvent = (
       e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
     ) => {
@@ -168,6 +163,52 @@ export const PartMaskCanvas = forwardRef<PartMaskCanvasHandle, PartMaskCanvasPro
         x: (e.clientX - rect.left) * scaleX,
         y: (e.clientY - rect.top) * scaleY,
       };
+    };
+
+    const commitShape = (end: MaskPoint, points: MaskPoint[]) => {
+      const canvas = displayRef.current;
+      if (!canvas) return;
+      let layer = layersRef.current[activePart];
+      if (!layer) {
+        layer = makeLayer(canvas.width, canvas.height);
+        layersRef.current[activePart] = layer;
+      }
+      const ctx = layer.getContext("2d");
+      if (!ctx) return;
+      fillShape(ctx, tool, startRef.current, end, points, {
+        erase,
+        fillStyle: "rgba(255,255,255,1)",
+      });
+      currentRef.current = null;
+      redraw();
+    };
+
+    const startDraw = (
+      e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+    ) => {
+      const pos = posFromEvent(e);
+      drawingRef.current = true;
+      startRef.current = pos;
+      pointsRef.current = [pos];
+      currentRef.current = { end: pos, points: [pos] };
+      redraw(currentRef.current);
+    };
+
+    const moveDraw = (
+      e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+    ) => {
+      if (!drawingRef.current) return;
+      const pos = posFromEvent(e);
+      if (tool === "lasso") pointsRef.current = [...pointsRef.current, pos];
+      currentRef.current = { end: pos, points: pointsRef.current };
+      redraw(currentRef.current);
+    };
+
+    const endDraw = () => {
+      if (!drawingRef.current) return;
+      drawingRef.current = false;
+      const current = currentRef.current;
+      commitShape(current?.end ?? startRef.current, current?.points ?? pointsRef.current);
     };
 
     useImperativeHandle(ref, () => ({
@@ -201,36 +242,21 @@ export const PartMaskCanvas = forwardRef<PartMaskCanvasHandle, PartMaskCanvasPro
         <canvas
           ref={displayRef}
           className={`h-full w-full object-contain ${erase ? "cursor-cell" : "cursor-crosshair"}`}
-          onMouseDown={(e) => {
-            drawingRef.current = true;
-            const { x, y } = posFromEvent(e);
-            paintAt(x, y);
-          }}
-          onMouseMove={(e) => {
-            if (!drawingRef.current) return;
-            const { x, y } = posFromEvent(e);
-            paintAt(x, y);
-          }}
-          onMouseUp={() => {
-            drawingRef.current = false;
-          }}
-          onMouseLeave={() => {
-            drawingRef.current = false;
-          }}
+          onMouseDown={startDraw}
+          onMouseMove={moveDraw}
+          onMouseUp={endDraw}
+          onMouseLeave={endDraw}
           onTouchStart={(e) => {
             e.preventDefault();
-            drawingRef.current = true;
-            const { x, y } = posFromEvent(e);
-            paintAt(x, y);
+            startDraw(e);
           }}
           onTouchMove={(e) => {
             e.preventDefault();
-            if (!drawingRef.current) return;
-            const { x, y } = posFromEvent(e);
-            paintAt(x, y);
+            moveDraw(e);
           }}
-          onTouchEnd={() => {
-            drawingRef.current = false;
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            endDraw();
           }}
         />
         {!ready && (

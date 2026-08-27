@@ -1,6 +1,5 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -18,20 +17,23 @@ const links = [
   { href: "/gemini", label: "オリジナル画像" },
 ];
 
+const navLinkClass = (active: boolean) =>
+  cn(
+    "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+    active
+      ? "bg-primary text-primary-foreground"
+      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+  );
+
 export function Nav() {
   const pathname = usePathname();
   const { email, isAdmin, ready, signOut } = useAuthUser();
-  const mounted = useSyncExternalStore(
-    () => () => undefined,
-    () => true,
-    () => false
-  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 items-center justify-between gap-2">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+        <div className="grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="text-lg font-bold tracking-tight text-primary">
               AI Render
             </span>
@@ -40,47 +42,38 @@ export function Nav() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                className={navLinkClass(
                   pathname === link.href ||
                     (link.href !== "/" && pathname.startsWith(link.href + "/"))
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 {link.label}
               </Link>
             ))}
-            {mounted && ready && isAdmin && (
-              <Link
-                href="/admin"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-                  pathname === "/admin"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
+          </nav>
+
+          <div className="hidden w-52 shrink-0 items-center justify-end gap-1 overflow-hidden md:flex">
+            {ready && isAdmin && (
+              <Link href="/admin" className={navLinkClass(pathname === "/admin")}>
                 管理
               </Link>
             )}
-          </nav>
-
-          {mounted && ready && email && (
-            <div className="hidden items-center gap-2 md:flex">
-              <span className="max-w-[140px] truncate text-xs text-muted-foreground">
-                {email}
-              </span>
-              <Button size="sm" variant="outline" onClick={() => void signOut()}>
-                ログアウト
-              </Button>
-            </div>
-          )}
+            {ready && email ? (
+              <>
+                <span className="min-w-0 truncate text-xs text-muted-foreground">
+                  {email}
+                </span>
+                <Button size="sm" variant="outline" onClick={() => void signOut()}>
+                  ログアウト
+                </Button>
+              </>
+            ) : null}
+          </div>
         </div>
       </div>
     </header>

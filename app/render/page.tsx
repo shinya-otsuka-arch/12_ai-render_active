@@ -13,12 +13,13 @@ import {
     API_PAYLOAD_BUDGET,
 } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
+import { outputsFromResponse } from "@/lib/variant-outputs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
+import { PromptRefineField } from "@/components/prompt-refine-field";
 import { ActiveProjectSelect } from "@/components/active-project-select";
 import { MaterialSearchAssistant } from "@/components/material-search-assistant";
 import {
@@ -31,6 +32,7 @@ import {
   PartMaskCanvas,
   type PartMaskCanvasHandle,
 } from "@/components/part-mask-canvas";
+import { MASK_SHAPE_TOOLS, type MaskShapeTool } from "@/lib/mask-shapes";
 import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 import type { ProjectType, Lighting } from "@/lib/prompt-builder";
@@ -111,10 +113,10 @@ export default function RenderPage() {
   const [lighting, setLighting] = useState<Lighting>("daytime");
   const [partFinishes, setPartFinishes] = useState<PartFinishSelection>({});
   const [activePart, setActivePart] = useState<FinishPart>("ceiling");
-  const [brushSize, setBrushSize] = useState([24]);
+  const [maskTool, setMaskTool] = useState<MaskShapeTool>("rect");
   const [erase, setErase] = useState(false);
-  const [strength, setStrength] = useState([0.75]);
-  const [structureScale, setStructureScale] = useState([0.85]);
+  const [strength, setStrength] = useState([0.55]);
+  const [structureScale, setStructureScale] = useState([0.92]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(
@@ -122,6 +124,8 @@ export default function RenderPage() {
   );
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(0);
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [generatingLabel, setGeneratingLabel] = useState("レンダリング中...");
   const [isDragging, setIsDragging] = useState(false);
@@ -132,6 +136,8 @@ export default function RenderPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const maskCanvasRef = useRef<PartMaskCanvasHandle>(null);
+  const rawOutputsRef = useRef<string[]>([]);
+  const inpaintedRef = useRef<Map<number, string>>(new Map());
 
   const visibleParts = partsForProjectType(projectType);
 
@@ -196,6 +202,58 @@ export default function RenderPage() {
     return data.output;
   };
 
+  const applyFinishes = async (src: string) => {
+    let output = src;
+    const masks = maskCanvasRef.current?.getMasks() ?? {};
+    for (const part of visibleParts) {
+      const finishId = partFinishes[part];
+      const mask = masks[part];
+      if (!finishId || !mask) continue;
+      setGeneratingLabel(`${PART_LABELS[part]}を仕上げ中...`);
+      output = await inpaintPart(
+        output,
+        mask,
+        buildPartInpaintPrompt(part, finishId)
+      );
+    }
+    return output;
+  };
+
+  const hasFinishMasks = () => {
+    const masks = maskCanvasRef.current?.getMasks() ?? {};
+    return visibleParts.some((part) => Boolean(partFinishes[part] && masks[part]));
+  };
+
+  const handleSelectCandidate = async (index: number) => {
+    if (index === selectedCandidate) return;
+    const cached = inpaintedRef.current.get(index);
+    if (cached) {
+      setSelectedCandidate(index);
+      setResultImage(cached);
+      return;
+    }
+    const raw = rawOutputsRef.current[index];
+    if (!raw) return;
+    if (!hasFinishMasks()) {
+      setSelectedCandidate(index);
+      setResultImage(raw);
+      return;
+    }
+    setStatus("generating");
+    setGeneratingLabel("仕上げ中...");
+    try {
+      const done = await applyFinishes(raw);
+      inpaintedRef.current.set(index, done);
+      setCandidates((prev) => prev.map((item, i) => (i === index ? done : item)));
+      setSelectedCandidate(index);
+      setResultImage(done);
+      setStatus("done");
+    } catch (err) {
+      setStatus("done");
+      toast.error(err instanceof Error ? err.message : "仕上げに失敗しました");
+    }
+  };
+
   const handleGenerate = async () => {
     if (!uploadedImage) {
       toast.error("CGまたはスケッチ画像をアップロードしてください");
@@ -203,7 +261,11 @@ export default function RenderPage() {
     }
     setStatus("generating");
     setResultImage(null);
+    setCandidates([]);
+    setSelectedCandidate(0);
     setGeneratingLabel("レンダリング中...");
+    rawOutputsRef.current = [];
+    inpaintedRef.current = new Map();
 
     try {
       const styleFields = houseStyleToApiFields(houseStyle);
@@ -233,22 +295,18 @@ export default function RenderPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await readApiJson<{ output: string }>(res);
-      let output = data.output;
-
-      const masks = maskCanvasRef.current?.getMasks() ?? {};
-      for (const part of visibleParts) {
-        const finishId = partFinishes[part];
-        const mask = masks[part];
-        if (!finishId || !mask) continue;
-        setGeneratingLabel(`${PART_LABELS[part]}を仕上げ中...`);
-        output = await inpaintPart(
-          output,
-          mask,
-          buildPartInpaintPrompt(part, finishId)
-        );
+      const data = await readApiJson<{ output: string; outputs?: string[] }>(res);
+      const outputs = outputsFromResponse(data);
+      rawOutputsRef.current = outputs;
+      const display = [...outputs];
+      if (hasFinishMasks() && display[0]) {
+        display[0] = await applyFinishes(display[0]);
+        inpaintedRef.current.set(0, display[0]);
       }
-
+      const output = display[0];
+      if (!output) throw new Error("画像生成に失敗しました");
+      setCandidates(display);
+      setSelectedCandidate(0);
       setResultImage(output);
       setStatus("done");
       const beforeUrl = await resizeDataUrl(uploadedImage);
@@ -361,7 +419,7 @@ export default function RenderPage() {
               仕上げ
             </p>
             <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
-              部位ごとに選択します。画像上をブラシで塗ると、その範囲に仕上げを割り当てます。
+              部位ごとに選択します。画像上を四角・丸・自由曲線で囲むと、その範囲に仕上げを割り当てます。
             </p>
             <div className="space-y-3">
               {visibleParts.map((part) => (
@@ -462,17 +520,21 @@ export default function RenderPage() {
 
           <Separator />
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              任意プロンプト
-            </p>
-            <Textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="例: warm oak flooring, soft morning light"
-              className="text-sm resize-none h-20"
-            />
-          </div>
+          <PromptRefineField
+            mode="render"
+            label="任意プロンプト"
+            value={customPrompt}
+            onChange={setCustomPrompt}
+            placeholder="例: warm oak flooring, soft morning light"
+            context={{
+              hasBaseImage: Boolean(uploadedImage),
+              hasMaterialRefs: Boolean(referenceImage),
+              hasStyleImages:
+                Boolean(houseStyle.houseStyleBrief) ||
+                houseStyle.styleImages.length > 0,
+            }}
+            disabled={status === "generating"}
+          />
 
           <Button
             onClick={handleGenerate}
@@ -495,6 +557,8 @@ export default function RenderPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
+            setCandidates([item.url]);
+            setSelectedCandidate(0);
             if (item.beforeUrl) setUploadedImage(item.beforeUrl);
             setStatus("done");
           }}
@@ -567,31 +631,41 @@ export default function RenderPage() {
                   ref={maskCanvasRef}
                   imageSrc={uploadedImage}
                   activePart={activePart}
-                  brushSize={brushSize[0]}
+                  tool={maskTool}
                   erase={erase}
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {MASK_SHAPE_TOOLS.map((item) => (
+                  <Button
+                    key={item.value}
+                    size="sm"
+                    variant={maskTool === item.value ? "default" : "outline"}
+                    onClick={() => setMaskTool(item.value)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
                 <Button
                   size="sm"
                   variant={erase ? "outline" : "default"}
                   onClick={() => setErase(false)}
                 >
-                  ブラシ
+                  追加
                 </Button>
                 <Button
                   size="sm"
                   variant={erase ? "default" : "outline"}
                   onClick={() => setErase(true)}
                 >
-                  消しゴム
+                  削除
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => maskCanvasRef.current?.clearActive()}
                 >
-                  {PART_LABELS[activePart]}の塗りを消す
+                  {PART_LABELS[activePart]}の範囲を消す
                 </Button>
                 <Button
                   size="sm"
@@ -600,25 +674,6 @@ export default function RenderPage() {
                 >
                   画像を変更
                 </Button>
-              </div>
-              <div>
-                <div className="mb-1 flex justify-between">
-                  <span className="text-xs text-muted-foreground">ブラシサイズ</span>
-                  <span className="text-xs text-muted-foreground">{brushSize[0]}</span>
-                </div>
-                <Slider
-                  value={brushSize}
-                  onValueChange={(val) => {
-                    const next = Array.isArray(val)
-                      ? (val as number[])
-                      : [val as number];
-                    setBrushSize(next);
-                  }}
-                  min={8}
-                  max={64}
-                  step={2}
-                  className="w-full"
-                />
               </div>
             </div>
           )}
@@ -640,9 +695,13 @@ export default function RenderPage() {
               status={status}
               beforeSrc={uploadedImage}
               afterSrc={resultImage}
+              candidates={candidates}
+              selectedCandidate={selectedCandidate}
+              onSelectCandidate={(index) => void handleSelectCandidate(index)}
               placeholderIcon="◈"
               emptyHint="ここに生成結果が表示されます"
               generatingLabel={generatingLabel}
+              generatingHint="候補を3枚生成します。1〜2分かかることがあります"
               downloadFileNamePrefix="archirender"
             />
           </div>

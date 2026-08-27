@@ -7,7 +7,7 @@ import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { ToolLayout } from "@/components/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { PromptRefineField } from "@/components/prompt-refine-field";
 import { useHistory } from "@/hooks/use-history";
 import { readApiJson } from "@/lib/api-client";
 import {
@@ -157,26 +157,24 @@ export default function OriginalImagePage() {
         <>
           <ActiveProjectSelect />
           <Separator />
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              生成指示
-            </p>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                isEditing
-                  ? "例: 構図は変えず、夕方の暖かい光にしてください"
-                  : "例: 自然素材を使った現代的な住宅の外観パース"
-              }
-              className="h-28 resize-none"
-            />
-            {isEditing && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                前回の画像を引き継いで再編集します
-              </p>
-            )}
-          </div>
+          <PromptRefineField
+            mode="gemini"
+            label="生成指示"
+            value={prompt}
+            onChange={setPrompt}
+            placeholder={
+              isEditing
+                ? "例: 構図は変えず、夕方の暖かい光にしてください"
+                : "例: 自然素材を使った現代的な住宅の外観パース"
+            }
+            hint={isEditing ? "前回の画像を引き継いで再編集します" : undefined}
+            textareaClassName="h-28 resize-none"
+            context={{
+              hasBaseImage: Boolean(baseImage) || isEditing,
+              hasMaterialRefs: refImages.length > 0,
+            }}
+            disabled={status === "generating"}
+          />
           <Separator />
           {/* 元画像 */}
           <div>
