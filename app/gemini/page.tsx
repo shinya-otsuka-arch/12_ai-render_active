@@ -294,7 +294,12 @@ export default function OriginalImagePage() {
           onSelect={(item) => {
             setResultImage(item.url);
             setStatus("done");
-            setPreviousImageDataUrl(null);
+            setPreviousImageDataUrl(item.url);
+            if (item.beforeUrl) {
+              setBaseImage({ id: crypto.randomUUID(), dataUrl: item.beforeUrl, name: "復元画像" });
+            } else {
+              setBaseImage(null);
+            }
           }}
           onClear={clearHistory}
           renderLabel={(params) => <>{params.aspectRatio}</>}

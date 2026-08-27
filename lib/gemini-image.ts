@@ -2,7 +2,7 @@ import "server-only";
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-export const ORIGINAL_IMAGE_MODEL = "gemini-2.5-flash-image";
+export const ORIGINAL_IMAGE_MODEL = "gemini-3.1-flash-image";
 export const ORIGINAL_IMAGE_MAX_IMAGES = 5;
 
 export type OriginalImageAspectRatio =

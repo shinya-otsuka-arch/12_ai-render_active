@@ -47,12 +47,27 @@ export function HistoryPanel<TParams>({
               onClick={() => onSelect(item)}
               className="group w-full overflow-hidden rounded-lg border border-border transition-colors hover:border-primary"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.url}
-                alt="履歴"
-                className="aspect-video w-full object-cover transition-opacity group-hover:opacity-90"
-              />
+              {item.beforeUrl ? (
+                <div className="flex aspect-video w-full transition-opacity group-hover:opacity-90">
+                  <div className="relative w-1/2 overflow-hidden border-r border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.beforeUrl} alt="変更前" className="h-full w-full object-cover" />
+                    <span className="absolute bottom-0.5 left-0.5 rounded bg-black/50 px-1 text-[10px] text-white">前</span>
+                  </div>
+                  <div className="relative w-1/2 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.url} alt="変更後" className="h-full w-full object-cover" />
+                    <span className="absolute bottom-0.5 right-0.5 rounded bg-black/50 px-1 text-[10px] text-white">後</span>
+                  </div>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.url}
+                  alt="履歴"
+                  className="aspect-video w-full object-cover transition-opacity group-hover:opacity-90"
+                />
+              )}
               <div className="p-1.5 text-left">
                 <p className="truncate text-xs text-muted-foreground">
                   {renderLabel(item.params)}

@@ -25,7 +25,7 @@ async function buildSearchQuery(query: string, mode?: string): Promise<string> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents:
         `建築ビジュアライゼーションの素材参考画像を検索します。` +
         `ユーザー要望を、画像検索に適した具体的な1行の検索語へ変換してください。` +
