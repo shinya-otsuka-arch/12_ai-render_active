@@ -28,4 +28,4 @@ surge $TmpDir $Domain
 
 # 後片付け
 Remove-Item $TmpDir -Recurse -Force
-Write-Host "完了" -ForegroundColor Green
+Write-Host "Done" -ForegroundColor Green
