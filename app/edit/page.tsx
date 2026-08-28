@@ -494,7 +494,7 @@ export default function EditPage() {
             setResultImage(item.url);
             setCandidates([item.url]);
             setSelectedCandidate(0);
-            if (item.beforeUrl) setUploadedImage(item.beforeUrl);
+            setUploadedImage(item.beforeUrl ?? null);
             setStatus("done");
           }}
           onClear={clearHistory}

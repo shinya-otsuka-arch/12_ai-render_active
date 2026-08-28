@@ -255,7 +255,7 @@ export default function StagingPage() {
           history={history}
           onSelect={(item) => {
             setResultImage(item.url);
-            if (item.beforeUrl) setUploadedImage(item.beforeUrl);
+            setUploadedImage(item.beforeUrl ?? null);
             setStatus("done");
           }}
           onClear={clearHistory}
