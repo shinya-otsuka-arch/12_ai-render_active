@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Render — ツール説明図解</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    function applyPlaceholder(img) {
+      img.style.display = 'none';
+      const sib = img.nextElementSibling;
+      if (sib) { sib.classList.remove('hidden'); sib.style.display = 'flex'; }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+    body { font-family: 'Noto Sans JP', sans-serif; }
+
+    .section-num {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .screen-placeholder {
+      background: repeating-linear-gradient(-45deg, #f1f5f9, #f1f5f9 4px, #e2e8f0 4px, #e2e8f0 8px);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <!-- ヘッダー -->
+  <header class="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-10 px-8">
+    <div class="max-w-4xl mx-auto">
+      <p class="text-blue-400 text-sm font-bold tracking-widest uppercase mb-2">卒業制作 — ツール説明図解</p>
+      <h1 class="text-4xl font-black tracking-tight mb-2">AI Render</h1>
+      <p class="text-slate-300 text-lg">社内向け AI 建築レンダリングツール</p>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-6 py-14 space-y-24">
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- 01 作ったもの                     -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="what-i-made">
+      <div class="flex items-baseline gap-3 mb-8">
+        <span class="text-5xl font-black section-num">01</span>
+        <h2 class="text-2xl font-bold text-slate-900">作ったもの</h2>
+      </div>
+
+      <!-- 概要 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-12 shadow-sm">
+        <h3 class="font-bold text-lg text-slate-900 mb-3">ツール概要</h3>
+        <p class="text-slate-600 leading-relaxed">
+          建築・インテリア向けの社内専用 AI レンダリングツール。CG・スケッチ・実写真をアップロードするだけで、写実的なパースの生成・素材変更・家具配置・部分編集・高品質化を行える。プロジェクト単位で履歴を管理し、チームで共有できる。
+        </p>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <span class="badge bg-blue-100 text-blue-700">Next.js 16</span>
+          <span class="badge bg-purple-100 text-purple-700">Supabase</span>
+          <span class="badge bg-green-100 text-green-700">Replicate</span>
+          <span class="badge bg-orange-100 text-orange-700">OpenAI</span>
+          <span class="badge bg-red-100 text-red-700">Gemini</span>
+          <span class="badge bg-slate-100 text-slate-700">Tailwind CSS</span>
+        </div>
+      </div>
+
+      <!-- ── 各画面 シーケンシャル表示 ── -->
+      <div class="space-y-20">
+
+        <!-- Screen 01 : トップページ -->
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">01</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">トップページ</h3>
+          <p class="text-sm text-slate-500 mb-5">6 モード構成 — 用途ごとに最適化されたツールを直接選択</p>
+          <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+            <img
+              src="screenshots/top.jpg"
+              alt="トップページ"
+              class="w-full block"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full hidden items-center justify-center text-slate-400 flex-col gap-2 py-20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-sm font-medium">screenshots/top.jpg</span>
+            </div>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            6 つの AI ツールをトップページからダイレクトに選択できます。用途ごとに最適なモデル・デフォルト設定が事前に設定されており、入力画像を選ぶだけで生成を開始できます。
+          </div>
+        </div>
+
+        <!-- Screen 02 : 画像登録 -->
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">02</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">画像登録（スタイルライブラリ）</h3>
+          <p class="text-sm text-slate-500 mb-5">チーム共有の参照画像ライブラリ — AI 解析済みで各ツールからそのまま参照可能</p>
+          <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+            <img
+              src="screenshots/style-library.jpg"
+              alt="画像登録"
+              class="w-full block"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full hidden items-center justify-center text-slate-400 flex-col gap-2 py-20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-sm font-medium">screenshots/style-library.jpg</span>
+            </div>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            ログイン全員で共有するスタイル参照画像のライブラリ。好みの建築写真・素材写真を登録しておくと、AI が自動解析してタグを付与します。各ツールの「AI 素材検索」から呼び出せます。
+          </div>
+        </div>
+
+        <!-- Screen 03 : AI パース（準備中） -->
+        <div class="opacity-60">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">03</span>
+            <span class="badge bg-amber-100 text-amber-600 ml-2">準備中</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">AI パース</h3>
+          <p class="text-sm text-slate-500 mb-5">CG / スケッチ → 写実化</p>
+          <div class="screen-placeholder rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center flex-col gap-3 py-24 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-sm font-medium">スクリーンショット追加予定</span>
+            <span class="text-xs">screenshots/render.jpg</span>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            SketchUp・CG・手書きスケッチをアップロードし、構造を保ったまま写実的なパース画像へ変換します。
+          </div>
+        </div>
+
+        <!-- Screen 04 : AI Reデザイン -->
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">04</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">AI Re デザイン</h3>
+          <p class="text-sm text-slate-500 mb-5">実写真 → 素材・色・雰囲気を変更（構造保持）</p>
+          <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+            <img
+              src="screenshots/redesign.jpg"
+              alt="AI Reデザイン"
+              class="w-full block"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full hidden items-center justify-center text-slate-400 flex-col gap-2 py-20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-sm font-medium">screenshots/redesign.jpg</span>
+            </div>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            内観・外観の実写真をアップロードし、壁・窓などの構造を保ちながら素材・色・雰囲気を変更します。左右 Before / After のスライダーで比較でき、生成結果を履歴として保存・チームに共有できます。
+          </div>
+        </div>
+
+        <!-- Screen 05 : AI ステージング（準備中） -->
+        <div class="opacity-60">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">05</span>
+            <span class="badge bg-amber-100 text-amber-600 ml-2">準備中</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">AI ステージング</h3>
+          <p class="text-sm text-slate-500 mb-5">空室写真 → 家具・インテリアを自動配置</p>
+          <div class="screen-placeholder rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center flex-col gap-3 py-24 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-sm font-medium">スクリーンショット追加予定</span>
+            <span class="text-xs">screenshots/staging.jpg</span>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            空室の写真に家具・インテリアを自動配置します。不動産・インテリアのビジュアル提案を短時間で仕上げられます。
+          </div>
+        </div>
+
+        <!-- Screen 06 : AI 編集 -->
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">06</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">AI 編集</h3>
+          <p class="text-sm text-slate-500 mb-5">マスクで範囲を指定 → 変更内容を入力するだけで部分変更</p>
+          <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+            <img
+              src="screenshots/edit.jpg"
+              alt="AI 編集"
+              class="w-full block"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full hidden items-center justify-center text-slate-400 flex-col gap-2 py-20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-sm font-medium">screenshots/edit.jpg</span>
+            </div>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            四角・丸・自由曲線のブラシで変更したい範囲を塗り、変更内容をテキストで入力するだけで部分変更できます。マスク外の領域は元の構造をそのまま維持するため、自然な仕上がりになります。
+          </div>
+        </div>
+
+        <!-- Screen 07 : AI 高品質化（準備中） -->
+        <div class="opacity-60">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">07</span>
+            <span class="badge bg-amber-100 text-amber-600 ml-2">準備中</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">AI 高品質化</h3>
+          <p class="text-sm text-slate-500 mb-5">完成パース・下書き → 高解像度・高品質に仕上げ</p>
+          <div class="screen-placeholder rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center flex-col gap-3 py-24 text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-sm font-medium">スクリーンショット追加予定</span>
+            <span class="text-xs">screenshots/enhance.jpg</span>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            完成パースや下書き画像を高解像度・高品質化します。細部の補完や創造的なディテール追加も可能です。
+          </div>
+        </div>
+
+        <!-- Screen 08 : オリジナル画像生成 -->
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">Screen</span>
+            <span class="text-3xl font-black section-num leading-none">08</span>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-1">オリジナル画像生成</h3>
+          <p class="text-sm text-slate-500 mb-5">Gemini — テキスト・参考画像から自由に生成、会話形式で繰り返し修正</p>
+          <div class="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+            <img
+              src="screenshots/original.jpg"
+              alt="オリジナル画像生成"
+              class="w-full block"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full hidden items-center justify-center text-slate-400 flex-col gap-2 py-20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-sm font-medium">screenshots/original.jpg</span>
+            </div>
+          </div>
+          <div class="mt-4 bg-white rounded-xl border border-slate-200 px-5 py-4 text-sm text-slate-600 leading-relaxed shadow-sm">
+            テキストや参考画像から自由に建築・インテリア画像を生成。元画像をベースにした編集や、会話形式での細かな修正が可能です。アスペクト比を指定して複数サイズを一括生成できます。
+          </div>
+        </div>
+
+      </div><!-- /screens -->
+    </section>
+
+    <hr class="border-slate-200" />
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- 02 解決する面倒・課題              -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="problems">
+      <div class="flex items-baseline gap-3 mb-6">
+        <span class="text-5xl font-black section-num">02</span>
+        <h2 class="text-2xl font-bold text-slate-900">解決する面倒・課題</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">パース作成に時間がかかる</p>
+              <p class="text-sm text-slate-500 mt-1">外部サービスや専門オペレーターに依頼すると数日〜数週間待ちになる。社内で即時に生成できる環境がなかった。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">コストが高い</p>
+              <p class="text-sm text-slate-500 mt-1">1 枚あたりの外注コストが大きく、提案段階での試行錯誤に使いにくかった。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-yellow-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">修正のたびに依頼が必要</p>
+              <p class="text-sm text-slate-500 mt-1">素材や色味を少し変えたいだけでも再依頼が発生し、スピード感を持って提案できなかった。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">ノウハウが属人化する</p>
+              <p class="text-sm text-slate-500 mt-1">AI ツールは個人アカウントや個別契約で使われており、プロンプトや生成結果が共有されず蓄積されなかった。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-4 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl p-5 text-slate-400 text-sm text-center">
+        ＋ 他にも課題があれば、このエリアを編集して追記してください
+      </div>
+    </section>
+
+    <hr class="border-slate-200" />
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- 03 作りたいと思った理由            -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="motivation">
+      <div class="flex items-baseline gap-3 mb-6">
+        <span class="text-5xl font-black section-num">03</span>
+        <h2 class="text-2xl font-bold text-slate-900">作りたいと思った理由</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 class="font-bold text-slate-800 mb-3">きっかけ</h3>
+          <p class="text-slate-400 leading-relaxed text-sm italic">
+            ここに、このテーマを選んだきっかけ・エピソードを書いてください。
+          </p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <h3 class="font-bold text-slate-800 mb-3">目指したこと</h3>
+          <p class="text-slate-400 leading-relaxed text-sm italic">
+            ここに、ツールで実現したかった状態・ゴールを書いてください。
+          </p>
+        </div>
+
+        <div class="md:col-span-2">
+          <div class="relative rounded-xl overflow-hidden">
+            <img
+              src="screenshots/motivation.jpg"
+              alt="補足画像"
+              class="w-full max-h-64 object-cover"
+              onerror="applyPlaceholder(this)"
+            />
+            <div class="screen-placeholder w-full h-40 hidden items-center justify-center text-slate-400 text-sm flex-col gap-1 rounded-xl border-2 border-dashed border-slate-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-xs">補足画像（任意）: screenshots/motivation.jpg</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <hr class="border-slate-200" />
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- 04 工夫・苦戦したポイント          -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="learnings">
+      <div class="flex items-baseline gap-3 mb-6">
+        <span class="text-5xl font-black section-num">04</span>
+        <h2 class="text-2xl font-bold text-slate-900">工夫したポイントと苦戦したポイント</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-2 h-6 rounded-full bg-blue-500 block"></span>
+            <h3 class="font-bold text-slate-800">工夫したポイント</h3>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <p class="font-bold text-sm text-blue-700 mb-1">プロンプト自動最適化</p>
+              <p class="text-sm text-slate-600">ユーザーが入力したキーワードを AI（OpenAI）で建築向け英語プロンプトに自動変換し、専門知識がなくても高品質な結果を出せるようにした。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <p class="font-bold text-sm text-blue-700 mb-1">ツール共通レイアウト</p>
+              <p class="text-sm text-slate-600">全 6 ツールで共通レイアウトを共有し、履歴パネル・プロジェクト選択・スタイル参照ピッカーを一元化。追加コストを最小化した。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <p class="font-bold text-sm text-blue-700 mb-1">スタイルライブラリ連携</p>
+              <p class="text-sm text-slate-600">蓄積した参照画像を AI 解析してタグ付けし、各ツールの素材検索から呼び出せる仕組みを設けた。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm text-slate-300 text-sm italic border-dashed border-2">
+              ＋ 工夫したポイントをここに追記できます
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-2 h-6 rounded-full bg-amber-500 block"></span>
+            <h3 class="font-bold text-slate-800">苦戦したポイント</h3>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+              <p class="font-bold text-sm text-amber-700 mb-1">生成品質のばらつき</p>
+              <p class="text-sm text-slate-600">モデルや ControlNet の設定によって同じ入力でも結果が大きく変わり、安定した品質を出すためのパラメータ調整に時間がかかった。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+              <p class="font-bold text-sm text-amber-700 mb-1">認証・権限管理</p>
+              <p class="text-sm text-slate-600">Supabase RLS と Next.js ミドルウェアの組み合わせで、管理者招待・プロジェクトメンバー制御を実装するのが複雑だった。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+              <p class="font-bold text-sm text-amber-700 mb-1">マスクキャンバスの実装</p>
+              <p class="text-sm text-slate-600">Canvas API を使ったブラシ描画と画像レイヤー合成で、座標変換や拡大縮小の処理に苦労した。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-dashed border-amber-200 p-4 shadow-sm text-amber-200 text-sm italic">
+              ＋ 苦戦したポイントをここに追記できます
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <hr class="border-slate-200" />
+
+    <!-- 自由記入 -->
+    <section id="extra">
+      <div class="bg-white rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-300">
+        <p class="text-lg font-bold mb-2">自由記入エリア</p>
+        <p class="text-sm">このセクションを編集して追加情報を記載してください。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-slate-900 text-slate-400 text-center py-6 mt-12 text-sm">
+    <p>AI Render — 卒業制作図解 | &copy; 2026</p>
+  </footer>
+
+  <script>
+    document.querySelectorAll('img').forEach(img => {
+      if (!img.onerror) img.addEventListener('error', () => applyPlaceholder(img));
+      if (img.complete && img.naturalWidth === 0) applyPlaceholder(img);
+    });
+  </script>
+
+</body>
+</html>
