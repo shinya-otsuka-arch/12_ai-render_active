@@ -16,7 +16,6 @@ import {
   addProjectMemberByEmail,
   removeProjectMember,
   listOrgProfiles,
-  PERSONAL_HISTORY_LOCAL_ID,
 } from "@/lib/project-actions";
 import type {
   ProjectMode,
@@ -42,8 +41,10 @@ export {
   addProjectMemberByEmail,
   removeProjectMember,
   listOrgProfiles,
-  PERSONAL_HISTORY_LOCAL_ID,
 };
+
+/** 作業中 Project 未選択時に使うユーザー専用履歴の local_id */
+export const PERSONAL_HISTORY_LOCAL_ID = "personal-history";
 
 const ACTIVE_KEY = "archirender-active-project";
 const ACTIVE_EVENT = "archirender-active-project";

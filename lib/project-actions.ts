@@ -17,8 +17,8 @@ export type ProjectMode =
   | "enhance"
   | "gemini";
 
-/** 作業中 Project 未選択時に使うユーザー専用履歴の local_id */
-export const PERSONAL_HISTORY_LOCAL_ID = "personal-history";
+/** 作業中 Project 未選択時に使うユーザー専用履歴の local_id（"use server" では const を export しない） */
+const PERSONAL_HISTORY_LOCAL_ID = "personal-history";
 
 export interface Project {
   id: string;
