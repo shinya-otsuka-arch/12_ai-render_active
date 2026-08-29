@@ -13,13 +13,18 @@ export function useProjects() {
 }
 
 export function useActiveProject() {
-  const [activeId, setActiveIdState] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [activeId, setActiveIdState] = useState<string | null>(() =>
+    typeof window !== "undefined" ? getActiveProjectId() : null
+  );
+  const [ready, setReady] = useState(() => typeof window !== "undefined");
 
   useEffect(() => {
-    setActiveIdState(getActiveProjectId());
-    setReady(true);
     return subscribeActiveProjectId(setActiveIdState);
+  }, []);
+
+  // setReady は SSR 環境（ready=false）でのハイドレーション後に true にする
+  useEffect(() => {
+    setReady(true);
   }, []);
 
   const setActiveId = useCallback((id: string | null) => {

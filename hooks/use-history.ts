@@ -23,11 +23,13 @@ export interface HistoryEntry<TParams> {
 
 const MAX_ITEMS = 20;
 const PERSONAL_SCOPE = "__personal__";
+const STALE_THRESHOLD_MS = 30_000;
 
 type CacheBucket<TParams> = {
   projectId: string;
   entries: HistoryEntry<TParams>[];
   isPersonal: boolean;
+  cachedAt: number;
 };
 
 /** key = `${scope}:${mode}` — scope は activeId または個人履歴 */
@@ -61,6 +63,7 @@ function writeCache<TParams>(
     projectId,
     entries,
     isPersonal,
+    cachedAt: Date.now(),
   });
 }
 
@@ -116,6 +119,7 @@ export function useHistory<TParams>(mode: ProjectMode) {
       setHistory(cached.entries);
       setCanClear(cached.isPersonal);
       projectIdRef.current = cached.projectId;
+      if (Date.now() - cached.cachedAt < STALE_THRESHOLD_MS) return;
     }
 
     try {
