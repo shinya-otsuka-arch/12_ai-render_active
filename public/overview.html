@@ -344,8 +344,30 @@
 
       </div>
 
-      <div class="mt-4 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl p-5 text-slate-400 text-sm text-center">
-        ＋ 他にも課題があれば、このエリアを編集して追記してください
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">打ち合わせごとの再提出に時間がかかる</p>
+              <p class="text-sm text-slate-500 mt-1">打ち合わせでその場に依頼された修正を 1 週間後に再提出するサイクルを、AI でその日のうちに短縮する。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex gap-3 items-start">
+            <div class="shrink-0 w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            </div>
+            <div>
+              <p class="font-bold text-slate-800">CG・生成結果が社内に蓄積されない</p>
+              <p class="text-sm text-slate-500 mt-1">生成履歴・参照画像・プロンプトをプロジェクト単位で蓄積し、CG を社内資産として AI を継続的に育てる仕組みを持つ。</p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -364,15 +386,15 @@
 
         <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <h3 class="font-bold text-slate-800 mb-3">きっかけ</h3>
-          <p class="text-slate-400 leading-relaxed text-sm italic">
-            ここに、このテーマを選んだきっかけ・エピソードを書いてください。
+          <p class="text-slate-600 leading-relaxed text-sm">
+            レンダリングにかける時間にいつもタイムラグがある。打ち合わせで依頼を受けてから提出まで数日〜1 週間かかることが常態化しており、提案スピードがボトルネックになっていた。
           </p>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <h3 class="font-bold text-slate-800 mb-3">目指したこと</h3>
-          <p class="text-slate-400 leading-relaxed text-sm italic">
-            ここに、ツールで実現したかった状態・ゴールを書いてください。
+          <p class="text-slate-600 leading-relaxed text-sm">
+            AI レンダリングは元画像を崩しすぎる問題がある。また一般的な AI レンダリングソフトは汎用性が高すぎるため、自社の作風とはかけ離れた画像が出てしまい「いかにも AI」な印象になりやすい。自社の作風に近く、現実的な範囲の中での生成を目指した。
           </p>
         </div>
 
@@ -425,8 +447,13 @@
               <p class="font-bold text-sm text-blue-700 mb-1">スタイルライブラリ連携</p>
               <p class="text-sm text-slate-600">蓄積した参照画像を AI 解析してタグ付けし、各ツールの素材検索から呼び出せる仕組みを設けた。</p>
             </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm text-slate-300 text-sm italic border-dashed border-2">
-              ＋ 工夫したポイントをここに追記できます
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <p class="font-bold text-sm text-blue-700 mb-1">社内用として育てられる設計</p>
+              <p class="text-sm text-slate-600">生成履歴・プロンプト・スタイルライブラリをプロジェクト単位で蓄積できる設計にした。使えば使うほど社内の好みやノウハウが資産として積み上がる。</p>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+              <p class="font-bold text-sm text-blue-700 mb-1">AI 画像検索チャットボット</p>
+              <p class="text-sm text-slate-600">各モードに AI 画像検索チャットボットを組み込み、その場で必要な素材をインターネットから検索できる。さらに使用許可の有無でフィルタリングし、ライセンスが確認できた画像のみを拾えるようにした。</p>
             </div>
           </div>
         </div>
