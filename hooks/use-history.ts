@@ -23,7 +23,8 @@ export interface HistoryEntry<TParams> {
 
 const MAX_ITEMS = 20;
 const PERSONAL_SCOPE = "__personal__";
-const STALE_THRESHOLD_MS = 30_000;
+/** 署名 URL の寿命は 7 日。タブ切替のたびに再署名しないよう長めに取る */
+const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 
 type CacheBucket<TParams> = {
   projectId: string;
@@ -79,6 +80,29 @@ function assetsToEntries<TParams>(
   }));
 }
 
+/** 同じ資産は既存の署名 URL を残し、ブラウザキャッシュを壊さない */
+function reuseSignedUrls<TParams>(
+  incoming: HistoryEntry<TParams>[],
+  previous: HistoryEntry<TParams>[] | undefined
+): HistoryEntry<TParams>[] {
+  if (!previous?.length) return incoming;
+  const prevById = new Map(previous.map((e) => [e.id, e]));
+  return incoming.map((entry) => {
+    const prev = prevById.get(entry.id);
+    if (!prev) return entry;
+    return { ...entry, url: prev.url, beforeUrl: prev.beforeUrl };
+  });
+}
+
+function historyFingerprint<TParams>(entries: HistoryEntry<TParams>[]) {
+  return entries
+    .map(
+      (e) =>
+        `${e.id}\0${e.url}\0${e.beforeUrl ?? ""}\0${e.createdAt}\0${JSON.stringify(e.params)}`
+    )
+    .join("\n");
+}
+
 /**
  * サーバー（Supabase project_assets）に紐づく生成履歴。
  * 作業中 Project があればそこ、なければユーザー専用の個人履歴へ保存する。
@@ -104,6 +128,19 @@ export function useHistory<TParams>(mode: ProjectMode) {
   const [ready, setReady] = useState(false);
   const projectIdRef = useRef<string | null>(initialCache?.projectId ?? null);
   const loadGenRef = useRef(0);
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
+  const applyHistory = useCallback(
+    (entries: HistoryEntry<TParams>[], isPersonal: boolean) => {
+      setCanClear(isPersonal);
+      if (historyFingerprint(entries) === historyFingerprint(historyRef.current)) {
+        return;
+      }
+      setHistory(entries);
+    },
+    []
+  );
 
   useEffect(() => {
     setActiveId(getActiveProjectId());
@@ -116,9 +153,8 @@ export function useHistory<TParams>(mode: ProjectMode) {
     const scope = scopeFromActiveId(getActiveProjectId());
     const cached = readCache<TParams>(scope, mode);
     if (cached) {
-      setHistory(cached.entries);
-      setCanClear(cached.isPersonal);
       projectIdRef.current = cached.projectId;
+      applyHistory(cached.entries, cached.isPersonal);
       if (Date.now() - cached.cachedAt < STALE_THRESHOLD_MS) return;
     }
 
@@ -130,10 +166,13 @@ export function useHistory<TParams>(mode: ProjectMode) {
       const assets = await listAssetsByMode(project.id, mode, MAX_ITEMS);
       if (gen !== loadGenRef.current) return;
 
-      const entries = assetsToEntries<TParams>(assets);
+      const previous = cached?.entries ?? historyRef.current;
+      const entries = reuseSignedUrls(
+        assetsToEntries<TParams>(assets),
+        previous
+      );
       writeCache(scope, mode, project.id, entries, isPersonal);
-      setHistory(entries);
-      setCanClear(isPersonal);
+      applyHistory(entries, isPersonal);
     } catch (err) {
       if (gen !== loadGenRef.current) return;
       console.error(err);
@@ -142,7 +181,7 @@ export function useHistory<TParams>(mode: ProjectMode) {
         setCanClear(false);
       }
     }
-  }, [mode]);
+  }, [mode, applyHistory]);
 
   useEffect(() => {
     if (!ready) return;
