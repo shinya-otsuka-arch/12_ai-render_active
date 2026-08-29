@@ -5,7 +5,7 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
+import { withFittedApiImages } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ActiveProjectSelect } from "@/components/active-project-select";
 import { MaterialSearchAssistant } from "@/components/material-search-assistant";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 
 interface EnhanceHistoryParams {
@@ -33,9 +32,8 @@ export default function EnhancePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
-  const { history, addEntry, clearHistory } = useHistory<EnhanceHistoryParams>(
-    "archirender-history-enhance"
-  );
+  const { history, addEntry, clearHistory } =
+    useHistory<EnhanceHistoryParams>("enhance");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,8 +98,7 @@ export default function EnhancePage() {
       const data = await readApiJson<{ output: string }>(res);
       setResultImage(data.output);
       setStatus("done");
-      const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(
+      await addEntry(
         data.output,
         {
           creativity: creativity[0],
@@ -109,19 +106,8 @@ export default function EnhancePage() {
           scaleFactor,
           preset: activePreset ?? undefined,
         },
-        beforeUrl
+        uploadedImage
       );
-      await saveToActiveProjectIfSelected({
-        mode: "enhance",
-        afterUrl: data.output,
-        beforeUrl: uploadedImage,
-        params: {
-          creativity: creativity[0],
-          resemblance: resemblance[0],
-          scaleFactor,
-          preset: activePreset ?? undefined,
-        },
-      });
       toast.success("高品質化が完成しました");
     } catch (err) {
       setStatus("error");

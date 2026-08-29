@@ -3,6 +3,7 @@ import {
   listProjects,
   createProject,
   createProjectWithLocalId,
+  ensurePersonalHistoryProject,
   renameProject,
   touchProject,
   deleteProject,
@@ -15,6 +16,7 @@ import {
   addProjectMemberByEmail,
   removeProjectMember,
   listOrgProfiles,
+  PERSONAL_HISTORY_LOCAL_ID,
 } from "@/lib/project-actions";
 import type {
   ProjectMode,
@@ -28,6 +30,7 @@ export {
   listProjects,
   createProject,
   createProjectWithLocalId,
+  ensurePersonalHistoryProject,
   renameProject,
   touchProject,
   deleteProject,
@@ -39,9 +42,11 @@ export {
   addProjectMemberByEmail,
   removeProjectMember,
   listOrgProfiles,
+  PERSONAL_HISTORY_LOCAL_ID,
 };
 
 const ACTIVE_KEY = "archirender-active-project";
+const ACTIVE_EVENT = "archirender-active-project";
 const STORE_MAX_EDGE = 1280;
 
 export function getActiveProjectId(): string | null {
@@ -52,6 +57,47 @@ export function getActiveProjectId(): string | null {
 export function setActiveProjectId(id: string | null) {
   if (id) localStorage.setItem(ACTIVE_KEY, id);
   else localStorage.removeItem(ACTIVE_KEY);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(ACTIVE_EVENT, { detail: id })
+    );
+  }
+}
+
+export function subscribeActiveProjectId(
+  listener: (id: string | null) => void
+): () => void {
+  if (typeof window === "undefined") return () => {};
+  const onCustom = (e: Event) => {
+    listener((e as CustomEvent<string | null>).detail ?? null);
+  };
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === ACTIVE_KEY) listener(e.newValue);
+  };
+  window.addEventListener(ACTIVE_EVENT, onCustom);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(ACTIVE_EVENT, onCustom);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+/**
+ * 履歴の保存・表示先 Project を決める。
+ * 作業中 Project があればそれ、なければ個人履歴（なければ作成）。
+ */
+export async function resolveHistoryProject(): Promise<{
+  project: Project;
+  isPersonal: boolean;
+}> {
+  const activeId = getActiveProjectId();
+  if (activeId) {
+    const project = await getProject(activeId);
+    if (project) return { project, isPersonal: false };
+  }
+  const result = await ensurePersonalHistoryProject();
+  if (!result.ok) throw new Error(result.error);
+  return { project: result.data, isPersonal: true };
 }
 
 export async function addAssetToProject(input: {
@@ -62,7 +108,6 @@ export async function addAssetToProject(input: {
   params: unknown;
   localId?: string;
 }): Promise<ProjectAsset> {
-  // ブラウザ側でリサイズしてから data URL をサーバーアクションへ渡す
   const afterDataUrl = await toResizedJpegDataUrl(input.afterUrl, STORE_MAX_EDGE);
   const beforeDataUrl = input.beforeUrl
     ? await toResizedJpegDataUrl(input.beforeUrl, STORE_MAX_EDGE)
@@ -76,23 +121,6 @@ export async function addAssetToProject(input: {
     params: input.params,
     localId: input.localId,
   });
-}
-
-export async function saveToActiveProjectIfSelected(input: {
-  mode: ProjectMode;
-  afterUrl: string;
-  beforeUrl?: string;
-  params: unknown;
-}): Promise<void> {
-  const projectId = getActiveProjectId();
-  if (!projectId) return;
-  try {
-    const project = await getProject(projectId);
-    if (!project) return;
-    await addAssetToProject({ projectId, ...input });
-  } catch (err) {
-    console.error("Projectへの保存に失敗:", err);
-  }
 }
 
 export const MODE_LABELS: Record<ProjectMode, string> = {

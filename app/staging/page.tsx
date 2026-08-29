@@ -5,7 +5,7 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
+import { withFittedApiImages } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,6 @@ import {
   houseStyleToApiFields,
   type HouseStyleSelection,
 } from "@/components/house-style-controls";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import {
   Select,
   SelectContent,
@@ -61,9 +60,8 @@ export default function StagingPage() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [houseStyle, setHouseStyle] = useState<HouseStyleSelection>(emptyHouseStyleSelection);
 
-  const { history, addEntry, clearHistory } = useHistory<StagingHistoryParams>(
-    "archirender-history-staging"
-  );
+  const { history, addEntry, clearHistory } =
+    useHistory<StagingHistoryParams>("staging");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,14 +121,7 @@ export default function StagingPage() {
       const data = await readApiJson<{ output: string }>(res);
       setResultImage(data.output);
       setStatus("done");
-      const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(data.output, { roomType, style }, beforeUrl);
-      await saveToActiveProjectIfSelected({
-        mode: "staging",
-        afterUrl: data.output,
-        beforeUrl: uploadedImage,
-        params: { roomType, style },
-      });
+      await addEntry(data.output, { roomType, style }, uploadedImage);
       toast.success("ステージングが完成しました");
     } catch (err) {
       setStatus("error");

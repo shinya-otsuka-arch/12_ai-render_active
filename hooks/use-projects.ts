@@ -8,6 +8,7 @@ import {
   listProjects,
   renameProject,
   setActiveProjectId,
+  subscribeActiveProjectId,
   type Project,
 } from "@/lib/project-store";
 import { toast } from "sonner";
@@ -74,6 +75,7 @@ export function useActiveProject() {
   useEffect(() => {
     setActiveIdState(getActiveProjectId());
     setReady(true);
+    return subscribeActiveProjectId(setActiveIdState);
   }, []);
 
   const setActiveId = useCallback((id: string | null) => {

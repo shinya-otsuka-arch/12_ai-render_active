@@ -17,6 +17,9 @@ export type ProjectMode =
   | "enhance"
   | "gemini";
 
+/** 作業中 Project 未選択時に使うユーザー専用履歴の local_id */
+export const PERSONAL_HISTORY_LOCAL_ID = "personal-history";
+
 export interface Project {
   id: string;
   name: string;
@@ -99,20 +102,22 @@ export async function listProjects(): Promise<ActionResult<Project[]>> {
 
     const { data, error } = await supabase
       .from("projects")
-      .select("id, name, owner_id, created_at, updated_at")
+      .select("id, name, owner_id, created_at, updated_at, local_id")
       .in("id", ids)
       .order("updated_at", { ascending: false });
     if (error) return actionFail(error.message);
 
     return actionOk(
-      (data ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        ownerId: row.owner_id,
-        myRole: roleByProject.get(row.id),
-      }))
+      (data ?? [])
+        .filter((row) => row.local_id !== PERSONAL_HISTORY_LOCAL_ID)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          ownerId: row.owner_id,
+          myRole: roleByProject.get(row.id),
+        }))
     );
   } catch (err) {
     return actionFail(errorMessage(err, "Projectsの取得に失敗しました"));
@@ -163,6 +168,13 @@ export async function createProject(
   } catch (err) {
     return actionFail(errorMessage(err, "Projectの作成に失敗しました"));
   }
+}
+
+/** ユーザー専用の個人履歴 Project を取得または作成する */
+export async function ensurePersonalHistoryProject(): Promise<
+  ActionResult<Project>
+> {
+  return createProjectWithLocalId("個人履歴", PERSONAL_HISTORY_LOCAL_ID);
 }
 
 export async function createProjectWithLocalId(

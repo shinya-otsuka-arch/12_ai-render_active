@@ -6,7 +6,6 @@ import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
 import {
-  resizeDataUrl,
   withFittedApiImages,
     preparePngForApi,
     API_PRIMARY_MAX_EDGE,
@@ -33,7 +32,6 @@ import {
   type PartMaskCanvasHandle,
 } from "@/components/part-mask-canvas";
 import { MASK_SHAPE_TOOLS, type MaskShapeTool } from "@/lib/mask-shapes";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 import type { ProjectType, Lighting } from "@/lib/prompt-builder";
 import {
@@ -130,9 +128,7 @@ export default function RenderPage() {
   const [generatingLabel, setGeneratingLabel] = useState("レンダリング中...");
   const [isDragging, setIsDragging] = useState(false);
 
-  const { history, addEntry, clearHistory } = useHistory<RenderHistoryParams>(
-    "archirender-history-render"
-  );
+  const { history, addEntry, clearHistory } = useHistory<RenderHistoryParams>("render");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const maskCanvasRef = useRef<PartMaskCanvasHandle>(null);
@@ -309,8 +305,7 @@ export default function RenderPage() {
       setSelectedCandidate(0);
       setResultImage(output);
       setStatus("done");
-      const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(
+      await addEntry(
         output,
         {
           projectType,
@@ -320,21 +315,8 @@ export default function RenderPage() {
           structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
-        beforeUrl
+        uploadedImage
       );
-      await saveToActiveProjectIfSelected({
-        mode: "render",
-        afterUrl: output,
-        beforeUrl: uploadedImage,
-        params: {
-          projectType,
-          lighting,
-          partFinishes,
-          strength: strength[0],
-          structureScale: structureScale[0],
-          customPrompt: customPrompt.trim() || undefined,
-        },
-      });
       toast.success("レンダリングが完成しました");
     } catch (err) {
       setStatus("error");

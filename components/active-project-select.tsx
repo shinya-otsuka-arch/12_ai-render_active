@@ -18,6 +18,8 @@ export function ActiveProjectSelect() {
 
   if (!projectsReady || !activeReady) return null;
 
+  const activeName = projects.find((p) => p.id === activeId)?.name;
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
@@ -28,10 +30,12 @@ export function ActiveProjectSelect() {
         onValueChange={(v) => setActiveId(!v || v === NONE ? null : String(v))}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="未選択" />
+          <SelectValue placeholder="未選択">
+            {activeId ? (activeName ?? "（不明なProject）") : "未選択"}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NONE}>未選択（Projectに保存しない）</SelectItem>
+          <SelectItem value={NONE}>未選択（個人履歴に保存）</SelectItem>
           {projects.map((p) => (
             <SelectItem key={p.id} value={p.id}>
               {p.name}
@@ -40,7 +44,7 @@ export function ActiveProjectSelect() {
         </SelectContent>
       </Select>
       <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-        選択中のProjectに生成結果を自動保存します。{" "}
+        選択中のProject、未選択時は個人履歴に生成結果を自動保存します。{" "}
         <Link href="/projects" className="underline hover:text-foreground">
           Projects
         </Link>

@@ -1,7 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { resizeDataUrl } from "@/lib/resize-image";
+import { useCallback, useEffect, useState } from "react";
+import {
+  addAssetToProject,
+  deleteAsset,
+  getActiveProjectId,
+  listAssets,
+  resolveHistoryProject,
+  subscribeActiveProjectId,
+  type ProjectMode,
+} from "@/lib/project-store";
+import { toast } from "sonner";
 
 export interface HistoryEntry<TParams> {
   id: string;
@@ -13,97 +22,130 @@ export interface HistoryEntry<TParams> {
 }
 
 const MAX_ITEMS = 20;
-/** localStorage 保存用サムネイルの長辺上限（容量対策） */
-const STORAGE_THUMB_EDGE = 480;
-
-function toThumb(src: string): Promise<string> {
-  return src.startsWith("data:") ? resizeDataUrl(src, STORAGE_THUMB_EDGE) : Promise.resolve(src);
-}
-
-function readStored<T>(key: string): T[] {
-  try {
-    const s = localStorage.getItem(key);
-    return s ? (JSON.parse(s) as T[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function trySet(key: string, items: unknown[]): boolean {
-  try {
-    localStorage.setItem(key, JSON.stringify(items));
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
- * localStorage に紐づく生成履歴を管理する共通フック。
- * ページごとに異なる storageKey を渡すことでモード別に履歴を分離する。
- *
- * React state はフル品質 URL を保持し、localStorage にはサムネイル（480px）を非同期で保存。
- * 容量不足時は古いエントリを削除してから beforeUrl を除去する順で縮退する。
+ * サーバー（Supabase project_assets）に紐づく生成履歴。
+ * 作業中 Project があればそこ、なければユーザー専用の個人履歴へ保存する。
  */
-export function useHistory<TParams>(storageKey: string) {
-  const [history, setHistory] = useState<HistoryEntry<TParams>[]>(() => {
-    if (typeof window === "undefined") return [];
-    return readStored<HistoryEntry<TParams>>(storageKey);
-  });
+export function useHistory<TParams>(mode: ProjectMode) {
+  const [history, setHistory] = useState<HistoryEntry<TParams>[]>([]);
+  const [canClear, setCanClear] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setActiveId(getActiveProjectId());
+    setReady(true);
+    return subscribeActiveProjectId(setActiveId);
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const { project, isPersonal } = await resolveHistoryProject();
+      setCanClear(isPersonal);
+      const assets = await listAssets(project.id);
+      const entries = assets
+        .filter((a) => a.mode === mode)
+        .slice(0, MAX_ITEMS)
+        .map(
+          (a): HistoryEntry<TParams> => ({
+            id: a.id,
+            url: a.afterUrl,
+            beforeUrl: a.beforeUrl,
+            params: a.params as TParams,
+            createdAt: a.createdAt,
+          })
+        );
+      setHistory(entries);
+    } catch (err) {
+      console.error(err);
+      setHistory([]);
+      setCanClear(false);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (!ready) return;
+    void load();
+  }, [ready, activeId, load]);
 
   const addEntry = useCallback(
-    (url: string, params: TParams, beforeUrl?: string) => {
-      const entry: HistoryEntry<TParams> = {
-        id: crypto.randomUUID(),
+    async (url: string, params: TParams, beforeUrl?: string) => {
+      const tempId = crypto.randomUUID();
+      const optimistic: HistoryEntry<TParams> = {
+        id: tempId,
         url,
         beforeUrl,
         params,
         createdAt: new Date().toISOString(),
       };
+      setHistory((prev) => [optimistic, ...prev].slice(0, MAX_ITEMS));
 
-      // React state を即時フル品質で更新（現セッション内は高品質表示）
-      setHistory((prev) => [entry, ...prev].slice(0, MAX_ITEMS));
+      try {
+        const { project, isPersonal } = await resolveHistoryProject();
+        setCanClear(isPersonal);
+        const saved = await addAssetToProject({
+          projectId: project.id,
+          mode,
+          afterUrl: url,
+          beforeUrl,
+          params,
+        });
 
-      // localStorage にはサムネイルを非同期で保存
-      void (async () => {
-        try {
-          const [thumbUrl, thumbBeforeUrl] = await Promise.all([
-            toThumb(url),
-            beforeUrl ? toThumb(beforeUrl) : Promise.resolve(undefined),
-          ]);
+        setHistory((prev) => {
+          const replaced = prev.map((e) =>
+            e.id === tempId
+              ? {
+                  id: saved.id,
+                  url: saved.afterUrl,
+                  beforeUrl: saved.beforeUrl,
+                  params: (saved.params as TParams) ?? params,
+                  createdAt: saved.createdAt,
+                }
+              : e
+          );
+          return replaced.slice(0, MAX_ITEMS);
+        });
 
-          const storageEntry: HistoryEntry<TParams> = {
-            ...entry,
-            url: thumbUrl,
-            beforeUrl: thumbBeforeUrl,
-          };
-
-          // 既存の保存済みリストへ新エントリを先頭に追加（重複除去）
-          const existing = readStored<HistoryEntry<TParams>>(storageKey);
-          const next = [storageEntry, ...existing.filter((e) => e.id !== entry.id)].slice(0, MAX_ITEMS);
-
-          if (trySet(storageKey, next)) return;
-
-          // 容量不足: 古いエントリを1件ずつ削除して再試行
-          for (let i = next.length - 1; i >= 1; i--) {
-            if (trySet(storageKey, next.slice(0, i))) return;
+        if (isPersonal) {
+          const assets = await listAssets(project.id);
+          const extras = assets
+            .filter((a) => a.mode === mode)
+            .slice(MAX_ITEMS);
+          for (const asset of extras) {
+            try {
+              await deleteAsset(asset.id);
+            } catch {
+              /* ignore */
+            }
           }
-
-          // 最終手段: beforeUrl を全除去してサイズを削減
-          const slim = next.map(({ beforeUrl: _b, ...rest }) => rest);
-          trySet(storageKey, slim);
-        } catch {
-          // resize 失敗等は無視
         }
-      })();
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          err instanceof Error ? err.message : "履歴の保存に失敗しました"
+        );
+      }
     },
-    [storageKey]
+    [mode]
   );
 
-  const clearHistory = useCallback(() => {
-    localStorage.removeItem(storageKey);
+  const clearHistory = useCallback(async () => {
+    if (!canClear) return;
+    const ids = history.map((h) => h.id);
     setHistory([]);
-  }, [storageKey]);
+    for (const id of ids) {
+      try {
+        await deleteAsset(id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }, [canClear, history]);
 
-  return { history, addEntry, clearHistory };
+  return {
+    history,
+    addEntry,
+    clearHistory: canClear ? clearHistory : undefined,
+  };
 }

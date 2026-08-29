@@ -5,7 +5,7 @@ import { ToolLayout } from "@/components/tool-layout";
 import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
-import { resizeDataUrl, withFittedApiImages } from "@/lib/resize-image";
+import { withFittedApiImages } from "@/lib/resize-image";
 import { readApiJson } from "@/lib/api-client";
 import { outputsFromResponse } from "@/lib/variant-outputs";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
   houseStyleToApiFields,
   type HouseStyleSelection,
 } from "@/components/house-style-controls";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import { toast } from "sonner";
 import type { ProjectType, Lighting, Material } from "@/lib/prompt-builder";
 
@@ -73,9 +72,8 @@ export default function RedesignPage() {
   const [status, setStatus] = useState<ResultStatus>("idle");
   const [isDragging, setIsDragging] = useState(false);
 
-  const { history, addEntry, clearHistory } = useHistory<RedesignHistoryParams>(
-    "archirender-history-redesign"
-  );
+  const { history, addEntry, clearHistory } =
+    useHistory<RedesignHistoryParams>("redesign");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,8 +150,7 @@ export default function RedesignPage() {
       setSelectedCandidate(0);
       setResultImage(output);
       setStatus("done");
-      const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(
+      await addEntry(
         output,
         {
           projectType,
@@ -163,21 +160,8 @@ export default function RedesignPage() {
           structureScale: structureScale[0],
           customPrompt: customPrompt.trim() || undefined,
         },
-        beforeUrl
+        uploadedImage
       );
-      await saveToActiveProjectIfSelected({
-        mode: "redesign",
-        afterUrl: output,
-        beforeUrl: uploadedImage,
-        params: {
-          projectType,
-          lighting,
-          materials,
-          strength: strength[0],
-          structureScale: structureScale[0],
-          customPrompt: customPrompt.trim() || undefined,
-        },
-      });
       toast.success("Reデザインが完成しました");
     } catch (err) {
       setStatus("error");

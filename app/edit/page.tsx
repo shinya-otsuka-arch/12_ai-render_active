@@ -6,7 +6,6 @@ import { ResultViewer, type ResultStatus } from "@/components/result-viewer";
 import { HistoryPanel } from "@/components/history-panel";
 import { useHistory } from "@/hooks/use-history";
 import {
-  resizeDataUrl,
   preparePngForApi,
   prepareImageForApi,
   API_PRIMARY_MAX_EDGE,
@@ -21,7 +20,6 @@ import { Separator } from "@/components/ui/separator";
 import { MaterialReferencePicker } from "@/components/material-reference-picker";
 import { ActiveProjectSelect } from "@/components/active-project-select";
 import { MaterialSearchAssistant } from "@/components/material-search-assistant";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import {
   fillShape,
   MASK_SHAPE_TOOLS,
@@ -48,9 +46,7 @@ export default function EditPage() {
   const [hasMask, setHasMask] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
-  const { history, addEntry, clearHistory } = useHistory<EditHistoryParams>(
-    "archirender-history-edit"
-  );
+  const { history, addEntry, clearHistory } = useHistory<EditHistoryParams>("edit");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -348,14 +344,7 @@ export default function EditPage() {
       setSelectedCandidate(0);
       setResultImage(output);
       setStatus("done");
-      const beforeUrl = await resizeDataUrl(uploadedImage);
-      addEntry(output, { prompt: editPrompt }, beforeUrl);
-      await saveToActiveProjectIfSelected({
-        mode: "edit",
-        afterUrl: output,
-        beforeUrl: uploadedImage,
-        params: { prompt: editPrompt },
-      });
+      await addEntry(output, { prompt: editPrompt }, uploadedImage);
       toast.success("画像の編集が完了しました");
     } catch (err) {
       setStatus("error");

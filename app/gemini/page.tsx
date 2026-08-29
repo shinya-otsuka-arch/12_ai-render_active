@@ -13,9 +13,7 @@ import { readApiJson } from "@/lib/api-client";
 import {
   API_AUX_MAX_EDGE,
   prepareImageForApi,
-  resizeDataUrl,
 } from "@/lib/resize-image";
-import { saveToActiveProjectIfSelected } from "@/lib/project-store";
 import type { OriginalImageAspectRatio } from "@/lib/gemini-image";
 import { toast } from "sonner";
 
@@ -49,9 +47,7 @@ export default function OriginalImagePage() {
   const [status, setStatus] = useState<ResultStatus>("idle");
   const baseInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
-  const { history, addEntry, clearHistory } = useHistory<HistoryParams>(
-    "archirender-history-gemini"
-  );
+  const { history, addEntry, clearHistory } = useHistory<HistoryParams>("gemini");
 
   const addBaseImage = (files: FileList | null) => {
     const file = files?.[0];
@@ -124,17 +120,11 @@ export default function OriginalImagePage() {
       setStatus("done");
 
       const beforeSrc = baseImage?.dataUrl;
-      addEntry(
+      await addEntry(
         data.output,
         { prompt: prompt.trim(), aspectRatio },
-        beforeSrc ? await resizeDataUrl(beforeSrc) : undefined
+        beforeSrc
       );
-      await saveToActiveProjectIfSelected({
-        mode: "gemini",
-        afterUrl: data.output,
-        beforeUrl: beforeSrc,
-        params: { prompt: prompt.trim(), aspectRatio },
-      });
       toast.success(isEditing ? "画像を再編集しました" : "画像を生成しました");
     } catch (err) {
       setStatus("error");
