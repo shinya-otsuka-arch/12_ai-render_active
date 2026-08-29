@@ -10,6 +10,7 @@ import {
   getProject,
   addAssetToProject as addAssetAction,
   listAssets,
+  listAssetsByMode,
   countAssets,
   deleteAsset,
   listProjectMembers,
@@ -35,6 +36,7 @@ export {
   deleteProject,
   getProject,
   listAssets,
+  listAssetsByMode,
   countAssets,
   deleteAsset,
   listProjectMembers,
@@ -49,6 +51,16 @@ export const PERSONAL_HISTORY_LOCAL_ID = "personal-history";
 const ACTIVE_KEY = "archirender-active-project";
 const ACTIVE_EVENT = "archirender-active-project";
 const STORE_MAX_EDGE = 1280;
+const RESOLVE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type ResolveCache = {
+  project: Project;
+  isPersonal: boolean;
+  activeId: string | null;
+  expiresAt: number;
+};
+
+let resolveCache: ResolveCache | null = null;
 
 export function getActiveProjectId(): string | null {
   if (typeof window === "undefined") return null;
@@ -58,6 +70,7 @@ export function getActiveProjectId(): string | null {
 export function setActiveProjectId(id: string | null) {
   if (id) localStorage.setItem(ACTIVE_KEY, id);
   else localStorage.removeItem(ACTIVE_KEY);
+  resolveCache = null;
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent(ACTIVE_EVENT, { detail: id })
@@ -86,19 +99,53 @@ export function subscribeActiveProjectId(
 /**
  * 履歴の保存・表示先 Project を決める。
  * 作業中 Project があればそれ、なければ個人履歴（なければ作成）。
+ * 短時間キャッシュでツール切替時の往復を減らす。
  */
 export async function resolveHistoryProject(): Promise<{
   project: Project;
   isPersonal: boolean;
 }> {
   const activeId = getActiveProjectId();
-  if (activeId) {
-    const project = await getProject(activeId);
-    if (project) return { project, isPersonal: false };
+  const now = Date.now();
+  if (
+    resolveCache &&
+    resolveCache.activeId === activeId &&
+    resolveCache.expiresAt > now
+  ) {
+    return {
+      project: resolveCache.project,
+      isPersonal: resolveCache.isPersonal,
+    };
   }
-  const result = await ensurePersonalHistoryProject();
-  if (!result.ok) throw new Error(result.error);
-  return { project: result.data, isPersonal: true };
+
+  let project: Project;
+  let isPersonal: boolean;
+
+  if (activeId) {
+    const found = await getProject(activeId);
+    if (found) {
+      project = found;
+      isPersonal = false;
+    } else {
+      const result = await ensurePersonalHistoryProject();
+      if (!result.ok) throw new Error(result.error);
+      project = result.data;
+      isPersonal = true;
+    }
+  } else {
+    const result = await ensurePersonalHistoryProject();
+    if (!result.ok) throw new Error(result.error);
+    project = result.data;
+    isPersonal = true;
+  }
+
+  resolveCache = {
+    project,
+    isPersonal,
+    activeId,
+    expiresAt: now + RESOLVE_CACHE_TTL_MS,
+  };
+  return { project, isPersonal };
 }
 
 export async function addAssetToProject(input: {

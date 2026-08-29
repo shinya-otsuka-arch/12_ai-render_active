@@ -66,6 +66,72 @@ async function makeSignedUrl(
   return data.signedUrl;
 }
 
+/** 複数パスをまとめて署名し、path → signedUrl の Map を返す */
+async function makeSignedUrlMap(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  paths: string[]
+): Promise<Map<string, string>> {
+  const unique = [...new Set(paths.filter(Boolean))];
+  const map = new Map<string, string>();
+  if (unique.length === 0) return map;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrls(unique, SIGNED_URL_TTL);
+  if (error) throw new Error("署名付き URL の取得に失敗しました");
+
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) {
+      map.set(item.path, item.signedUrl);
+    }
+  }
+  return map;
+}
+
+type AssetRow = {
+  id: string;
+  project_id: string;
+  mode: string;
+  after_path: string;
+  before_path: string | null;
+  params: unknown;
+  created_at: string;
+  created_by: string;
+};
+
+async function rowsToAssets(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: AssetRow[]
+): Promise<ProjectAsset[]> {
+  const paths: string[] = [];
+  for (const row of rows) {
+    paths.push(row.after_path);
+    if (row.before_path) paths.push(row.before_path);
+  }
+  const urlMap = await makeSignedUrlMap(supabase, paths);
+
+  return rows.map((row) => {
+    const afterUrl = urlMap.get(row.after_path);
+    if (!afterUrl) {
+      throw new Error("署名付き URL の取得に失敗しました");
+    }
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      mode: row.mode as ProjectMode,
+      afterUrl,
+      beforeUrl: row.before_path
+        ? urlMap.get(row.before_path)
+        : undefined,
+      afterPath: row.after_path,
+      beforePath: row.before_path ?? undefined,
+      params: row.params,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+    };
+  });
+}
+
 function dataUrlToBuffer(
   dataUrl: string
 ): { buffer: Buffer; contentType: string } {
@@ -444,27 +510,28 @@ export async function listAssets(
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
+  return rowsToAssets(supabase, (data ?? []) as AssetRow[]);
+}
 
-  const assets: ProjectAsset[] = [];
-  for (const row of data ?? []) {
-    const afterUrl = await makeSignedUrl(supabase, row.after_path);
-    const beforeUrl = row.before_path
-      ? await makeSignedUrl(supabase, row.before_path)
-      : undefined;
-    assets.push({
-      id: row.id,
-      projectId: row.project_id,
-      mode: row.mode as ProjectMode,
-      afterUrl,
-      beforeUrl,
-      afterPath: row.after_path,
-      beforePath: row.before_path ?? undefined,
-      params: row.params,
-      createdAt: row.created_at,
-      createdBy: row.created_by,
-    });
-  }
-  return assets;
+/** 指定 mode の資産だけを limit 件取得（履歴パネル用） */
+export async function listAssetsByMode(
+  projectId: string,
+  mode: ProjectMode,
+  limit = 20
+): Promise<ProjectAsset[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_assets")
+    .select(
+      "id, project_id, mode, after_path, before_path, params, created_at, created_by"
+    )
+    .eq("project_id", projectId)
+    .eq("mode", mode)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return rowsToAssets(supabase, (data ?? []) as AssetRow[]);
 }
 
 export async function countAssets(projectId: string): Promise<number> {
